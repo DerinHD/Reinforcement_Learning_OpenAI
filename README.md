@@ -1,4 +1,4 @@
-# Reinforcement Learning OpenAI Codebase
+# Reinforcement Learning Open AI Codebase
 This repository includes reinforcement learning algorithms and environments that are compatible with OpenAI Gymnasium and the Stable-Baselines3 library.
 
 The project gives you the possibility to train and evaluate a model on a specific environment via terminal. 
