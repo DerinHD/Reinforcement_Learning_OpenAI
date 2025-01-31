@@ -2,12 +2,26 @@
 This repository includes reinforcement learning algorithms and environments that are compatible with OpenAI Gymnasium and the Stable-Baselines3 library.
 
 # Steps to use project
-## 0. Prerequisites
+## 0. Installation Requirements
 
-### 0.1 Install python
-https://www.python.org/downloads/
+### 0.1 Install python 
+Install python using the following link: https://www.python.org/downloads/.
 
-### 0.2 Create a virtual python environment (This is optional but recommended)
+Note: To use the library Stable Baselines3 which is needed for this project, take care of the following points:
+
+    - Stable Baselines3 requires python 3.9+
+    - The python version 3.13.1 is not compatible with this library. 
+    - The maximum compatible version which i tried was 3.12.0
+
+### 0.2 Install git
+Install git using the following link: https://git-scm.com/downloads
+
+
+### 0.3 (Only for Windows Users) C++ Compiler Support 
+To use library the Stable Baseline3 you need a C++ Compiler Support. I used the Build tools from Visual Studio https://visualstudio.microsoft.com/de/downloads/ to install the needed tools but maybe there is another faster option.
+
+
+### 1. Create a virtual python environment (This is optional but recommended)
 1. Install virtualenv:
 ```bash
 pip install virtualenv
@@ -18,13 +32,23 @@ python<version> -m venv <virtual-environment-name>
 ```
 3. Run the following code to activate the environment:
 ```bash
-source env/bin/activate (can be different for windows)
+source <virtual-environment-name>/bin/activate 
+```
+
+For Windows users: 
+```bash
+.\<virtual-environment-name>\Scripts\activate
+```
+
+Note: You might need to enable running scripts: 
+```bash
+set-executionpolicy remotesigned
 ```
 
 For more details, view https://docs.python.org/3/library/venv.html or https://mothergeo-py.readthedocs.io/en/latest/development/how-to/venv-win.html(Windows)
 
-## 1. Setup project
-### 1.1 Clone project:
+## 2. Setup project
+### 2.1 Clone project:
 ```bash
 git clone https://github.com/DerinHD/Reinforcement_Learning_OpenAI.git 
 ```
@@ -33,7 +57,7 @@ or
 git clone git@github.com:DerinHD/Reinforcement_Learning_OpenAI.git
 ```
 
-### 1.2 Install project
+### 2.2 Install project
 Run the following code at the root directory:
 ```bash
 pip install -e .
