@@ -1,6 +1,12 @@
 # Reinforcement_Learning_OpenAI
 This repository includes reinforcement learning algorithms and environments that are compatible with OpenAI Gymnasium and the Stable-Baselines3 library.
 
+The project gives you the possibility to train and evaluate a model on a specific environment via terminal. 
+The model and the environment can be custom or one from the Open AI Gymnasium resp. Stable-Baselines3 library. 
+The project is structured in such a way that it should be easy to add more custom or external models to the repo. If there are any questions, feel free to contact me.
+Additionally, you have the possibility to visualize the performance of the model and add other visualization methods.
+
+
 # Steps to use project
 ## 0. Installation Requirements
 
