@@ -2,9 +2,9 @@ import numpy as np
 import os
 
 # import environments
-from environment.openAI.frozenlake_env import create_frozen_lake_environment, save_frozen_lake_env, load_frozen_lake_env
+from environment.openAI.frozenlake_env import create_frozen_lake_environment, save_frozen_lake_env, load_frozen_lake_env, get_action_names_frozen_lake_environment
 from environment.custom.trustgame_env import create_trustgame_environment, save_trustgame_env, load_trustgame_env
-from environment.openAI.mountainCar_env import create_mountain_car_environment, save_mountain_car_env, load_mountain_car_env
+from environment.openAI.mountainCar_env import create_mountain_car_environment, save_mountain_car_env, load_mountain_car_env, get_action_names_mountain_car_environment
 
 # import rl models
 # custom
@@ -27,6 +27,7 @@ list_of_custom_environments = {
     "Trustgame": ["Discrete", "Discrete"],
 }
 
+
 models_compatibility_action_space = {
     "Box": ["ARS","PPO"],
     "Discrete": ["QLearning", "Sarsa", "Montecarlo","DQN", "ARS","PPO", "DynaQ"],
@@ -41,26 +42,30 @@ models_compatibility_observation_space = {
     "MultiBinary": ["DQN", "ARS","PPO"],
 }
 
-def create_custom_environment(environment_name, folder_name):
+def create_custom_environment(environment_name, folder_path):
     env = None
     parameters = None
     if environment_name == "Trustgame":
         env, parameters = create_trustgame_environment()
-        save_trustgame_env(f"../trained_models/{folder_name}/{environment_name}.environment", parameters)
+        save_trustgame_env(f"{folder_path}/{environment_name}.environment", parameters)
+    else:
+        pass
 
     # specify more environments
     return env, parameters
 
-def create_openAI_environment(environment_name, folder_name):
+def create_openAI_environment(environment_name, folder_path):
     env = None
     parameters = None
     
     if environment_name == "FrozenLake-v1":
         env, parameters = create_frozen_lake_environment()
-        save_frozen_lake_env(f"../trained_models/{folder_name}/{environment_name}.environment", parameters)
+        save_frozen_lake_env(f"{folder_path}//{environment_name}.environment", parameters)
     elif environment_name == "MountainCar-v0":
         env, parameters = create_mountain_car_environment()
-        save_mountain_car_env(f"../trained_models/{folder_name}/{environment_name}.environment", parameters)
+        save_mountain_car_env(f"{folder_path}//{environment_name}.environment", parameters)
+    else:
+        pass
 
     # specify more environments
     return env, parameters
@@ -102,7 +107,7 @@ def create_model_and_learn(model_name, folder_name, num_episodes, env):
         model.learn(num_episodes)
         model.save(f"../trained_models/{folder_name}/{model_name}.model")
 
-def load_environment(folder_name):
+def load_environment(folder_path):
     """
     Loads environment from the trained model folder
 
@@ -112,8 +117,7 @@ def load_environment(folder_name):
         name of the folder where the model was trained
     """
 
-    directory = f"../trained_models/{folder_name}"
-    content = os.listdir(directory)
+    content = os.listdir(folder_path)
 
     idx = None
     for i, c in enumerate(content):
@@ -124,7 +128,7 @@ def load_environment(folder_name):
     environment_name = content[idx].split(".")[0]
 
     env = None
-    path = f"{directory}/{content[idx]}"
+    path = f"{folder_path}/{content[idx]}"
 
     if environment_name == "FrozenLake-v1":
         env = load_frozen_lake_env(path)
@@ -173,3 +177,18 @@ def load_model(folder_name):
     
     return model
     
+def get_action_names(env_name):
+    """
+    Get the list of names for the actions 
+
+    Parameters:
+
+    env_name:
+        name of the environment
+    """
+    if env_name ==  "FrozenLake-v1":
+        return get_action_names_frozen_lake_environment()
+    elif env_name == "MountainCar-v0":
+        return get_action_names_mountain_car_environment()
+    else:
+        pass

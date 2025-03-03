@@ -73,3 +73,16 @@ def save_mountain_car_env(file_path, parameters):
     """
     with open(file_path, 'wb') as file:
         pickle.dump(parameters, file)
+
+
+def get_action_names_mountain_car_environment():
+    """
+    Get the list of names for the actions 
+    """
+    action_names = {
+        0: "Accelerate to the left",
+        1: "Don’t accelerate",
+        2: "Accelerate to the right"
+    }
+
+    return action_names

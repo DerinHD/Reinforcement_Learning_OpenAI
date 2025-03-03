@@ -14,6 +14,7 @@ env = create_frozen_lake_environment()
 model = Qlearning.create_model(env)
 """
 
+    
 def create_frozen_lake_environment():
     """
     Create Open AI Frozenlake environment by configuring its parameters via terminal.
@@ -92,3 +93,16 @@ def save_frozen_lake_env(file_path, parameters):
     """
     with open(file_path, 'wb') as file:
         pickle.dump(parameters, file)
+
+def get_action_names_frozen_lake_environment():
+    """
+    Get the list of names for the actions 
+    """
+    action_names = {
+        0: "Move left",
+        1: "Move down",
+        2: "Move right",
+        3: "Move up"
+    }
+
+    return action_names
