@@ -3,12 +3,14 @@ import settings
 import numpy as np
 import os
 from pathvalidate import is_valid_filename
+from collections import defaultdict
 
 # OpenAi wrappers
 from gymnasium.wrappers import RecordVideo # used to record training as video
 from stable_baselines3.common.monitor import Monitor # used to monitor rewards during training
-
+ 
 import helper
+import pygame
 
 
 
@@ -91,10 +93,10 @@ def train():
     # 4 User configures environment parameters
     if input_env_custom_or_OpenAI == "1": # Custom environment was chosen
         env_spaces = settings.list_of_custom_environments[environment_name] # get observation and action space 
-        env, env_parameters = settings.create_custom_environment(environment_name, input_foldername)
+        env, _ = settings.create_custom_environment(environment_name, f"../trained_models/{input_foldername}")
     else: # Open AI environment was chosen
         env_spaces = settings.list_of_openAI_environments[environment_name] # get observation and action space 
-        env, env_parameters = settings.create_openAI_environment(environment_name, input_foldername)
+        env, _ = settings.create_openAI_environment(environment_name, f"../trained_models/{input_foldername}")
     
 
     # get a list of models which are compatible with the chosen environment by looking at the observation and action spaces 
@@ -154,7 +156,7 @@ def evaluate():
 
     # 2. Load environment and model
     env = settings.load_environment(input_trained_model)
-    model = settings.load_model(input_trained_model)
+    model = settings.load_model(f"../trained_models/{input_trained_model}")
 
     print("Run an episode")
 
@@ -179,6 +181,118 @@ def evaluate():
 
     print("Finish")
 
+def create_demonstration_data():
+    """
+    Creates demonstration data for a specific environment which can be used for inverse reinforcement learning to generate an own reward function.
+    """
+
+    # 1. Enter folder name to save demonstration data and environment parameters
+    input_foldername = None
+    while True:
+        input_foldername= input("How do you want to name the demonstration model? Ensure that the folder name is valid and does not exist already:\nAnswer:")
+        if is_valid_filename(input_foldername) and not os.path.exists(f"../demonstration_data/{input_foldername}"):
+            os.makedirs(f"../demonstration_data/{input_foldername}")
+            print("\n")
+            break
+        else:
+            print("Invalid input. Please try again\n")
+
+    # 2. Choose environment
+
+    # Merge both environment lists and determine which environment has discrete action space
+    merged_dict = defaultdict(list)  
+
+    for env_list in (settings.list_of_custom_environments, settings.list_of_openAI_environments):
+        for key, value in env_list.items():
+            merged_dict[key] += value 
+
+    env_with_discrete_action_space = defaultdict(list)
+
+    for item in merged_dict.items():
+        env_name, spaces = item
+        action_space = spaces[1]
+        if action_space == "Discrete":
+            env_with_discrete_action_space[env_name] = spaces
+
+    prompt = "Which of the following environments do you want to use? \n"
+
+    pairs, single_choice_prompt = helper.create_single_choice(env_with_discrete_action_space)
+
+    input_single_choice_idx = helper.get_valid_input(prompt + single_choice_prompt,  pairs.keys()) # get index of environment 
+    environment_name = pairs[input_single_choice_idx]
+
+    # Save environment parameters
+    env, _ = settings.create_custom_environment(environment_name, f"../demonstration_data/{input_foldername}")
+
+    if env == None:
+        env, _ = settings.create_openAI_environment(environment_name, f"../demonstration_data/{input_foldername}")
+    
+        print("Run an episode")
+
+    # Load environment with GUI visualization
+    env = settings.load_environment(f"../demonstration_data/{input_foldername}")
+
+    # key list
+    key_to_action = {
+        pygame.K_0: 0, 
+        pygame.K_1: 1, 
+        pygame.K_2: 2, 
+        pygame.K_3: 3, 
+        pygame.K_4: 4, 
+        pygame.K_5: 5, 
+        pygame.K_6: 6, 
+        pygame.K_7: 7, 
+        pygame.K_8: 8,
+        pygame.K_9: 9,
+        #...
+    }
+
+    print("Actions available:")
+    action_names = settings.get_action_names(environment_name)
+    for key, value in action_names.items():
+        print(f"Action index: {key}, value: {value}")
+
+
+    # Run a specific number of episodes to generate demonstration data
+    demonstration_data = []
+    done = False
+    while not done:
+        obs,_ = env.reset()
+        transitions = {}
+        i = 0
+        episode_over = False
+        while not episode_over:
+            env.render()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    episode_over = True
+                if event.type == pygame.KEYDOWN:
+                    if event.key in key_to_action and key_to_action[event.key] in action_names.keys():
+                        action = key_to_action[event.key]  
+
+                        observation, reward, terminated, truncated, info = env.step(action)
+
+                        transitions[i] = [obs, action]
+
+                        episode_over = terminated or truncated
+
+                        if episode_over:
+                            transitions[i+1] = observation 
+
+                        obs = observation
+                        i +=1
+        
+        demonstration_data.append(transitions)
+        input_done = helper.get_valid_input("Do you want to play another episode? \n1)Yes\n2)No", ["1", "2"])
+
+        if input_done == "2":
+            done = True
+
+    with open(f"../demonstration_data/{input_foldername}/demonstration.data", 'wb') as file:
+        pickle.dump(demonstration_data, file)
+
+    print("Finish")
+
 def main():
     logo = """
   _____  _         ____                              _____    _____          _      _                    
@@ -198,18 +312,14 @@ def main():
     
     print(logo+welcomeText)
 
-    input_train_or_evaluate = helper.get_valid_input("Do you want to train or evaluate a model? \n1)Train \n2)Evaluate", ["1","2"])
+    input_train_or_evaluate = helper.get_valid_input("Choose one of the following options? \n1)Train an agent \n2)Evaluate an agent \n3)Create demonstration data", ["1","2", "3"])
     
     if input_train_or_evaluate == "1":
         train() 
-    else:
+    elif input_train_or_evaluate == "2":
         evaluate() 
+    else:
+        create_demonstration_data() 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
