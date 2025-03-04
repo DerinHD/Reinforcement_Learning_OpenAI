@@ -57,7 +57,7 @@ def load_mountain_car_env(file_path):
     return gym.make(
         id="MountainCar-v0",
         render_mode = "human"
-    )
+    ), parameters
 
 def save_mountain_car_env(file_path, parameters):
     """

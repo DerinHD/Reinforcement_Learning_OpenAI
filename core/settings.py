@@ -122,7 +122,6 @@ def load_environment(folder_path):
     """
 
     content = os.listdir(folder_path)
-    content = os.listdir(folder_path)
 
     idx = None
     for i, c in enumerate(content):
@@ -133,7 +132,6 @@ def load_environment(folder_path):
     environment_name = content[idx].split(".")[0]
 
     env = None
-    path = f"{folder_path}/{content[idx]}"
     path = f"{folder_path}/{content[idx]}"
 
     if environment_name == "FrozenLake-v1":
