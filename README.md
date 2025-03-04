@@ -1,5 +1,15 @@
-# Reinforcement_Learning_OpenAI
+# Reinforcement Learning Open AI Codebase
 This repository includes reinforcement learning algorithms and environments that are compatible with OpenAI Gymnasium and the Stable-Baselines3 library.
+
+The project gives you the possibility to train and evaluate a model on a specific environment via terminal. 
+The model and the environment can be custom or one from the Open AI Gymnasium resp. Stable-Baselines3 library. 
+The project is structured in such a way that it should be easy to add more custom or external models to the repo. 
+Additionally, you have the possibility to visualize the performance of the model and add other visualization methods.
+
+**Current Status of the Project**:
+The project currently contains basic tabular RL algorithms. The plan is to add more complex model using neural networks (e.g. Feedforward, RNN/LSTM, ...) and more complex environments (e.g. Atari, Planet Task, ..)
+
+**If there are any questions, improvements or ideas for new models, feel free to contact me.**
 
 # Steps to use project
 ## 0. Installation Requirements
