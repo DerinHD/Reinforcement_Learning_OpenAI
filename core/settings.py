@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import os
 
@@ -131,13 +132,13 @@ def load_environment(folder_path):
     path = f"{folder_path}/{content[idx]}"
 
     if environment_name == "FrozenLake-v1":
-        env = load_frozen_lake_env(path)
+        env, parameters = load_frozen_lake_env(path)
     elif environment_name == "Trustgame":
-        env = load_trustgame_env(path)
+        env, parameters = load_trustgame_env(path)
     elif environment_name == "MountainCar-v0":
-        env = load_mountain_car_env(path)
+        env, parameters = load_mountain_car_env(path)
 
-    return env
+    return env, parameters
 
 def load_model(folder_name):
     """
@@ -177,6 +178,34 @@ def load_model(folder_name):
     
     return model
     
+
+def load_demonstration_data(folder_path):
+    """
+    Loads demonstration data from the demonstration_data folder
+
+    parameters:
+
+    folder_name:
+        name of the folder where the model was trained
+    """
+
+    content = os.listdir(folder_path)
+
+    idx = None
+    for i, c in enumerate(content):
+        if len(c.split(".")) >=2:
+            if c.split(".")[1] == "data":
+                idx = i
+
+    path = f"{folder_path}/{content[idx]}"
+
+    demonstration_data = None
+
+    with open(path, 'rb') as file:
+        demonstration_data = pickle.load(file)
+        
+    return demonstration_data
+
 def get_action_names(env_name):
     """
     Get the list of names for the actions 

@@ -293,7 +293,7 @@ def load_trustgame_env(file_path):
     with open(file_path, 'rb') as file:
         parameters = pickle.load(file)
             
-    return TrustGameEnv(num_rounds=parameters["num_rounds"])
+    return TrustGameEnv(num_rounds=parameters["num_rounds"]), parameters
 
 def save_trustgame_env(file_path, parameters):
     """

@@ -77,7 +77,8 @@ def load_frozen_lake_env(file_path):
         desc=generate_random_map(
             size=parameters["map_size"], seed=parameters["seed"], p=parameters["prob_frozen"]
         )
-    )
+    ), parameters
+
 
 def save_frozen_lake_env(file_path, parameters):
     """

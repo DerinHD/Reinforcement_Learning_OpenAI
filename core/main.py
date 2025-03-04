@@ -144,7 +144,7 @@ def train():
 
 def evaluate():
 
-    # 1. Enter folder name of trained model
+    # 1. Enter folder ncreate_demonstration_dataame of trained model
     input_trained_model = None
     while True:
         input_trained_model = input("Name the folder of the trained model: \n")
@@ -155,8 +155,8 @@ def evaluate():
             print("Invalid file name. Try again\n")
 
     # 2. Load environment and model
-    env = settings.load_environment(input_trained_model)
-    model = settings.load_model(f"../trained_models/{input_trained_model}")
+    env, _ = settings.load_environment(input_trained_model)
+    model = settings.load_model(input_trained_model)
 
     print("Run an episode")
 
@@ -230,7 +230,7 @@ def create_demonstration_data():
         print("Run an episode")
 
     # Load environment with GUI visualization
-    env = settings.load_environment(f"../demonstration_data/{input_foldername}")
+    env, _ = settings.load_environment(f"../demonstration_data/{input_foldername}")
 
     # key list
     key_to_action = {
@@ -247,16 +247,16 @@ def create_demonstration_data():
         #...
     }
 
-    print("Actions available:")
-    action_names = settings.get_action_names(environment_name)
-    for key, value in action_names.items():
-        print(f"Action index: {key}, value: {value}")
-
 
     # Run a specific number of episodes to generate demonstration data
     demonstration_data = []
     done = False
     while not done:
+        print("Actions available:")
+        action_names = settings.get_action_names(environment_name)
+        for key, value in action_names.items():
+            print(f"Action index: {key}, value: {value}")
+
         obs,_ = env.reset()
         transitions = {}
         i = 0
@@ -283,7 +283,7 @@ def create_demonstration_data():
                         i +=1
         
         demonstration_data.append(transitions)
-        input_done = helper.get_valid_input("Do you want to play another episode? \n1)Yes\n2)No", ["1", "2"])
+        input_done = helper.get_valid_input("\nDo you want to play another episode? \n1)Yes\n2)No", ["1", "2"])
 
         if input_done == "2":
             done = True
@@ -292,6 +292,29 @@ def create_demonstration_data():
         pickle.dump(demonstration_data, file)
 
     print("Finish")
+
+
+def show_demonstration_data():
+    input_folder_name = None
+    while True:
+        input_folder_name = input("Name the folder which contains the demonstration data: \n")
+        if os.path.exists(f"../demonstration_data/{input_folder_name}"):
+            print("\n")
+            break
+        else:
+            print("Invalid file name. Try again\n")
+
+    #1. Show environment parameters
+    env, parameters = settings.load_environment(f"../demonstration_data/{input_folder_name}")
+
+    print(f"Parameters of the environment: {parameters}\n")
+
+    demonstration_data = settings.load_demonstration_data(f"../demonstration_data/{input_folder_name}")
+
+    for i in range(len(demonstration_data)):
+        episode = demonstration_data[i]
+        print(f"Episode {i}:\n")
+        print(f"{episode} \n")
 
 def main():
     logo = """
@@ -312,14 +335,21 @@ def main():
     
     print(logo+welcomeText)
 
-    input_train_or_evaluate = helper.get_valid_input("Choose one of the following options? \n1)Train an agent \n2)Evaluate an agent \n3)Create demonstration data", ["1","2", "3"])
+    input_train_or_evaluate = helper.get_valid_input("Choose one of the following options?  \
+                                                     \n1)Train an agent \
+                                                     \n2)Evaluate an agent \
+                                                     \n3)Create demonstration data \
+                                                     \n4)Show demonstration data\n", \
+                                                     ["1","2", "3", "4"])
     
     if input_train_or_evaluate == "1":
         train() 
     elif input_train_or_evaluate == "2":
         evaluate() 
+    elif input_train_or_evaluate == "3":
+        create_demonstration_data()
     else:
-        create_demonstration_data() 
+        show_demonstration_data() 
 
 if __name__ == "__main__":
     main()
