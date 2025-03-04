@@ -155,8 +155,8 @@ def evaluate():
             print("Invalid file name. Try again\n")
 
     # 2. Load environment and model
-    env, _ = settings.load_environment(input_trained_model)
-    model = settings.load_model(input_trained_model)
+    env, _ = settings.load_environment(f"../trained_models/{input_trained_model}")
+    model = settings.load_model(f"../trained_models/{input_trained_model}")
 
     print("Run an episode")
 
@@ -353,9 +353,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
