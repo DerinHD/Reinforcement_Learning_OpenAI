@@ -47,14 +47,10 @@ models_compatibility_observation_space = {
 }
 
 def create_custom_environment(environment_name, folder_path):
-def create_custom_environment(environment_name, folder_path):
     env = None
     parameters = None
     if environment_name == "Trustgame":
         env, parameters = create_trustgame_environment()
-        save_trustgame_env(f"{folder_path}/{environment_name}.environment", parameters)
-    else:
-        pass
         save_trustgame_env(f"{folder_path}/{environment_name}.environment", parameters)
     else:
         pass
@@ -63,19 +59,14 @@ def create_custom_environment(environment_name, folder_path):
     return env, parameters
 
 def create_openAI_environment(environment_name, folder_path):
-def create_openAI_environment(environment_name, folder_path):
     env = None
     parameters = None
     
     if environment_name == "FrozenLake-v1":
         env, parameters = create_frozen_lake_environment()
         save_frozen_lake_env(f"{folder_path}//{environment_name}.environment", parameters)
-        save_frozen_lake_env(f"{folder_path}//{environment_name}.environment", parameters)
     elif environment_name == "MountainCar-v0":
         env, parameters = create_mountain_car_environment()
-        save_mountain_car_env(f"{folder_path}//{environment_name}.environment", parameters)
-    else:
-        pass
         save_mountain_car_env(f"{folder_path}//{environment_name}.environment", parameters)
     else:
         pass
@@ -120,7 +111,6 @@ def create_model_and_learn(model_name, folder_name, num_episodes, env):
         model.learn(num_episodes)
         model.save(f"../trained_models/{folder_name}/{model_name}.model")
 
-def load_environment(folder_path):
 def load_environment(folder_path):
     """
     Loads environment from the trained model folder
