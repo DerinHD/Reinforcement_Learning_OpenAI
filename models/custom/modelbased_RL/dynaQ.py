@@ -9,6 +9,7 @@ import os
 import gymnasium as gym
 from tqdm import tqdm
 import core.helper as helper
+from models.custom.baseModel import BaseModel
 
 actions = [0,10,20,30,40,50]
 states = [0,1,2]
@@ -40,7 +41,7 @@ model = DynaQ(env, learning_rate, gamma, epsilon)
 -------------------------------------------------------------
 """
 
-class DynaQ:
+class DynaQ(BaseModel):
     def __init__(self, env:gym.Env, learning_rate=0.1, gamma= 0.0, epsilon= 0.1, num_planning_steps=5):
         """
         -------------------------------------------------------------

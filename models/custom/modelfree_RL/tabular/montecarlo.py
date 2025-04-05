@@ -4,6 +4,7 @@ import pickle
 import os
 import gymnasium as gym
 import core.helper as helper
+from models.custom.baseModel import BaseModel
 
 """
 MonteCarlo is a model free tabular RL algorithm which uses a Q-function to compute the expected reward and an epsilon-greedy policy 
@@ -30,7 +31,7 @@ model = MonteCarlo(env, learning_rate, gamma, epsilon)
 -------------------------------------------------------------
 """
 
-class MonteCarlo:
+class MonteCarlo(BaseModel):
     """
     -------------------------------------------------------------
     Attributes:

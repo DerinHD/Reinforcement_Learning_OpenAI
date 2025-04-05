@@ -170,5 +170,4 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-trained_models/
-demonstration_data/
+data/

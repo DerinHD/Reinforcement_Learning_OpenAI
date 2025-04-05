@@ -4,6 +4,7 @@ import pickle
 import os
 import gymnasium as gym
 import core.helper as helper
+from models.custom.baseModel import BaseModel
 
 """
 Sarsa is a model free tabular RL algorithm which uses a Q-function to compute the expected reward and an epsilon-greedy policy 
@@ -31,7 +32,7 @@ model = Sarsa(env, learning_rate, gamma, epsilon)
 -------------------------------------------------------------
 """
 
-class Sarsa:
+class Sarsa(BaseModel):
     """
     -------------------------------------------------------------
     Attributes:

@@ -1,9 +1,12 @@
+import csv
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 import pickle
 import os
 import gymnasium as gym
 import core.helper as helper
+from models.custom.baseModel import BaseModel
 
 """
 QLearning is a model free tabular RL algorithm which uses a Q-function to compute the expected reward and an epsilon-greedy policy 
@@ -31,7 +34,7 @@ model = Qlearning(env, learning_rate, gamma, epsilon)
 -------------------------------------------------------------
 """
 
-class Qlearning:
+class Qlearning(BaseModel):
     """
     -------------------------------------------------------------
     Attributes:
@@ -117,7 +120,7 @@ class Qlearning:
         """
         Resets the Q-table to zero
         """
-
+        print(f"observation space: {self.env.observation_space.n}")
         self.qtable = np.zeros((self.env.observation_space.n, self.env.action_space.n))
 
     def predict(self, state: int, is_training: bool=False):
@@ -158,6 +161,7 @@ class Qlearning:
             state = self.env.reset()[0] # reset environment after each episode
             done = False
             
+            #print("run")
             while not done: # while episode is not over
                 action = self.predict(state=state, is_training=True) # receive best action for current state
 
@@ -168,6 +172,7 @@ class Qlearning:
                 self.update(state, action, reward, new_state) # update qtable
 
                 state = new_state # update state 
+            #print("done")
 
     def save(self, file_path: str):
         """
@@ -183,6 +188,20 @@ class Qlearning:
         with open(file_path, 'wb') as file:
             pickle.dump(self, file)
         print(f"Model saved to {file_path}")
+
+        df_params = pd.DataFrame({
+            "Parameter": ["Learning Rate", "Discount Factor (Gamma)", "Exploration Rate (Epsilon)"],
+            "Value": [self.learning_rate, self.gamma, self.epsilon]
+        })
+
+        # Create DataFrame for Q-table
+        df_qtable = pd.DataFrame(self.qtable)
+
+        # Save parameters to CSV (overwrite if file exists)
+        df_params.to_csv(file_path+"ss", index=False)
+
+        # Append Q-table to the same file
+        df_qtable.to_csv(file_path+"ss", mode='a', index=False, header=False)
 
     @staticmethod
     def load(file_path: str):

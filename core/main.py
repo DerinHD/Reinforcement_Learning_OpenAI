@@ -8,11 +8,10 @@ from collections import defaultdict
 # OpenAi wrappers
 from gymnasium.wrappers import RecordVideo # used to record training as video
 from stable_baselines3.common.monitor import Monitor # used to monitor rewards during training
- 
+from inverseRL.max_entropy import max_entropy
+
 import helper
 import pygame
-
-
 
 """
 This file allows the user to train or evaluate a model on a specific environment via terminal.
@@ -53,7 +52,6 @@ Output:
 def episode_trigger(episode_id):
     return episode_id % 10 == 0
 
-
 def train():
     """
     Trains a model on an environment and saves it in the directory trained_models
@@ -62,26 +60,16 @@ def train():
     input_foldername = None
     while True:
         input_foldername= input("How do you want to name the trained model? Ensure that the folder name is valid and does not exist already:\nAnswer:")
-        if is_valid_filename(input_foldername) and not os.path.exists(f"../trained_models/{input_foldername}"):
-            os.makedirs(f"../trained_models/{input_foldername}")
+        if is_valid_filename(input_foldername) and not os.path.exists(f"../data/trainedModels/{input_foldername}"):
+            os.makedirs(f"../data/trainedModels/{input_foldername}")
             print("\n")
             break
         else:
             print("Invalid input. Please try again\n")
 
     # 2. User decides if he want to train on custom or Open AI environment
-    env = None
-    env_spaces = None
+    env_list = settings.list_of_environments
 
-    input_env_custom_or_OpenAI = helper.get_valid_input("On which environment do you want to train a model? \n1) Custom environment \n2) Open AI environment", ["1","2"])
-    
-    env_list = None
-    if input_env_custom_or_OpenAI == "1": # Custom environment was chosen
-        env_list = settings.list_of_custom_environments
-    else: # Open AI environment was chosen
-        env_list = settings.list_of_openAI_environments
-
-    
     # 3 User decides which environment from the given list he wants to use
     prompt = "Which of the following environments do you want to use? \n"
 
@@ -91,13 +79,8 @@ def train():
     environment_name = pairs[input_single_choice_idx]
      
     # 4 User configures environment parameters
-    if input_env_custom_or_OpenAI == "1": # Custom environment was chosen
-        env_spaces = settings.list_of_custom_environments[environment_name] # get observation and action space 
-        env, _ = settings.create_custom_environment(environment_name, f"../trained_models/{input_foldername}")
-    else: # Open AI environment was chosen
-        env_spaces = settings.list_of_openAI_environments[environment_name] # get observation and action space 
-        env, _ = settings.create_openAI_environment(environment_name, f"../trained_models/{input_foldername}")
-    
+    env_spaces = settings.list_of_environments[environment_name] # get observation and action space 
+    env, _ = settings.create_environment(environment_name, f"../data/trainedModels/{input_foldername}")
 
     # get a list of models which are compatible with the chosen environment by looking at the observation and action spaces 
     list_of_compatible_models = np.intersect1d(settings.models_compatibility_observation_space[env_spaces[0]], settings.models_compatibility_action_space[env_spaces[1]])
@@ -121,13 +104,13 @@ def train():
         input_video_or_not = helper.get_valid_input("\nDoes your environment supports video?\n1)Yes \n2)No ",  ["1","2"])
         if input_video_or_not =="1":
             try:
-                env = RecordVideo(env, f"../trained_models/{input_foldername}/recordings", episode_trigger=lambda e: e in episodes_to_record)
+                env = RecordVideo(env, f"../data/trainedModels/{input_foldername}/recordings", episode_trigger=lambda e: e in episodes_to_record)
             except AttributeError:
                 print("Video not supported")
         else:
             pass
             #TODO
-
+    print(env)
 
     print("Train_model...\n")
 
@@ -137,26 +120,69 @@ def train():
     settings.create_model_and_learn(model_name, input_foldername, num_episodes, env)
 
     # 9. Save records during training
-    path_rewards = f"../trained_models/{input_foldername}/rewards.data"
+    path_rewards = f"../data/trainedModels/{input_foldername}/rewards.data"
     with open(path_rewards, 'wb') as file:
         pickle.dump(env.get_episode_rewards(), file)
 
 
 def evaluate():
-
     # 1. Enter folder ncreate_demonstration_dataame of trained model
     input_trained_model = None
     while True:
         input_trained_model = input("Name the folder of the trained model: \n")
-        if os.path.exists(f"../trained_models/{input_trained_model}"):
+        if os.path.exists(f"../data/trainedModels/{input_trained_model}"):
             print("\n")
             break
         else:
             print("Invalid file name. Try again\n")
 
     # 2. Load environment and model
-    env, _ = settings.load_environment(f"../trained_models/{input_trained_model}")
-    model = settings.load_model(f"../trained_models/{input_trained_model}")
+    env, _, _ = settings.load_environment(f"../data/trainedModels/{input_trained_model}")
+    model = settings.load_model(f"../data/trainedModels/{input_trained_model}")
+
+    print("Run an episode")
+
+    obs,_ = env.reset()
+
+    episode_over = False
+    while not episode_over:
+        action = None
+        result = model.predict(obs)
+        if isinstance(result, tuple):
+            action, _ = result
+        else:
+            action = result
+
+        action = action.item()
+
+        observation, reward, terminated, truncated, info = env.step(action)
+
+        episode_over = terminated or truncated
+        env.render()
+        obs = observation
+
+    print("Finish")
+
+def show_inverse_RL():
+    input_trained_model = None
+    while True:
+        input_trained_model = input("Name the folder of the reward function model: \n")
+        if os.path.exists(f"../data/rewardFunctionData/{input_trained_model}"):
+            print("\n")
+            break
+        else:
+            print("Invalid file name. Try again\n")
+
+    env, _, _ = settings.load_environment(f"../data/rewardFunctionData/{input_trained_model}", render_mode="human")
+    model = settings.load_model(f"../data/rewardFunctionData/{input_trained_model}")
+
+    theta = None
+
+    with open(f"../data/rewardFunctionData/{input_trained_model}/reward_function.data", 'rb') as file:
+        theta = pickle.load(file)
+
+    env.reward_function = "max_entropy"
+    env.max_entropy_configure(theta)
 
     print("Run an episode")
 
@@ -190,25 +216,17 @@ def create_demonstration_data():
     input_foldername = None
     while True:
         input_foldername= input("How do you want to name the demonstration model? Ensure that the folder name is valid and does not exist already:\nAnswer:")
-        if is_valid_filename(input_foldername) and not os.path.exists(f"../demonstration_data/{input_foldername}"):
-            os.makedirs(f"../demonstration_data/{input_foldername}")
+        if is_valid_filename(input_foldername) and not os.path.exists(f"../data/demonstrationData/{input_foldername}"):
+            os.makedirs(f"../data/demonstrationData/{input_foldername}")
             print("\n")
             break
         else:
             print("Invalid input. Please try again\n")
 
     # 2. Choose environment
-
-    # Merge both environment lists and determine which environment has discrete action space
-    merged_dict = defaultdict(list)  
-
-    for env_list in (settings.list_of_custom_environments, settings.list_of_openAI_environments):
-        for key, value in env_list.items():
-            merged_dict[key] += value 
-
     env_with_discrete_action_space = defaultdict(list)
 
-    for item in merged_dict.items():
+    for item in settings.list_of_environments.items():
         env_name, spaces = item
         action_space = spaces[1]
         if action_space == "Discrete":
@@ -222,15 +240,10 @@ def create_demonstration_data():
     environment_name = pairs[input_single_choice_idx]
 
     # Save environment parameters
-    env, _ = settings.create_custom_environment(environment_name, f"../demonstration_data/{input_foldername}")
-
-    if env == None:
-        env, _ = settings.create_openAI_environment(environment_name, f"../demonstration_data/{input_foldername}")
-    
-        print("Run an episode")
+    env, _ = settings.create_environment(environment_name, f"../data/demonstrationData/{input_foldername}")
 
     # Load environment with GUI visualization
-    env, _ = settings.load_environment(f"../demonstration_data/{input_foldername}")
+    env, _, _ = settings.load_environment(f"../data/demonstrationData/{input_foldername}")
 
     # key list
     key_to_action = {
@@ -250,6 +263,7 @@ def create_demonstration_data():
 
     # Run a specific number of episodes to generate demonstration data
     demonstration_data = []
+    data_for_df = []
     done = False
     while not done:
         print("Actions available:")
@@ -276,9 +290,6 @@ def create_demonstration_data():
 
                         episode_over = terminated or truncated
 
-                        if episode_over:
-                            transitions[i+1] = observation 
-
                         obs = observation
                         i +=1
         
@@ -288,33 +299,104 @@ def create_demonstration_data():
         if input_done == "2":
             done = True
 
-    with open(f"../demonstration_data/{input_foldername}/demonstration.data", 'wb') as file:
-        pickle.dump(demonstration_data, file)
+
+    #with open(f"../data/demonstrationData/{input_foldername}/demonstration.data", 'wb') as file:
+    #    pickle.dump(demonstration_data, file)
 
     print("Finish")
-
 
 def show_demonstration_data():
     input_folder_name = None
     while True:
         input_folder_name = input("Name the folder which contains the demonstration data: \n")
-        if os.path.exists(f"../demonstration_data/{input_folder_name}"):
+        if os.path.exists(f"../data/demonstrationData/{input_folder_name}"):
             print("\n")
             break
         else:
             print("Invalid file name. Try again\n")
 
     #1. Show environment parameters
-    env, parameters = settings.load_environment(f"../demonstration_data/{input_folder_name}")
+    env, parameters, _ = settings.load_environment(f"../data/demonstrationData/{input_folder_name}")
 
     print(f"Parameters of the environment: {parameters}\n")
 
-    demonstration_data = settings.load_demonstration_data(f"../demonstration_data/{input_folder_name}")
+    demonstration_data = settings.load_demonstration_data(f"../data/demonstrationData/{input_folder_name}")
 
     for i in range(len(demonstration_data)):
-        episode = demonstration_data[i]
         print(f"Episode {i}:\n")
-        print(f"{episode} \n")
+        for key, value in demonstration_data[i].items():
+            print(f"step: {key} , (state, action): {value}")
+
+def inverse_RL():
+    input_folder_name = None
+    while True:
+        input_folder_name = input("Name the folder which contains the demonstration data: \n")
+        if os.path.exists(f"../data/demonstrationData/{input_folder_name}"):
+            print("\n")
+            break
+        else:
+            print("Invalid file name. Try again\n")
+
+    save_folder_name = None
+    while True:
+        save_folder_name = input("Name the folder in which the reward function data should be saved: \n")
+        if is_valid_filename(save_folder_name) and not os.path.exists(f"../data/rewardFunctionData/{save_folder_name}"):
+            os.makedirs(f"../data/rewardFunctionData/{save_folder_name}")
+            break
+        else:
+            print("Invalid file name. Try again\n")
+
+    #1. Show environment parameters
+    env, parameters, environment_name = settings.load_environment(f"../data/demonstrationData/{input_folder_name}", render_mode="rgb_array")
+    demonstration_data = settings.load_demonstration_data(f"../data/demonstrationData/{input_folder_name}")
+
+    env_spaces = settings.list_of_environments[environment_name] 
+
+    # get a list of models which are compatible with the chosen environment by looking at the observation and action spaces 
+    list_of_compatible_models = np.intersect1d(settings.models_compatibility_observation_space[env_spaces[0]], settings.models_compatibility_action_space[env_spaces[1]])
+
+    prompt ="Which of the following compatible models do you want to use?\n"
+    pairs, single_choice_prompt = helper.create_single_choice(list_of_compatible_models)
+
+    input_model_idx = helper.get_valid_input(prompt + single_choice_prompt, pairs.keys())
+    model_name = pairs[input_model_idx]
+    model = settings.create_model(model_name, env)
+
+    theta, model = max_entropy(model, demonstration_data, num_iterations = 300, alpha = 0.1)
+
+    with open(f"../data/rewardFunctionData/{save_folder_name}/reward_function.data", 'wb') as file:
+        pickle.dump(theta, file)
+
+    with open(f"../data/rewardFunctionData/{save_folder_name}/{environment_name}.environment", 'wb') as file:
+        pickle.dump(parameters, file)
+
+    model.save(f"../data/rewardFunctionData/{save_folder_name}/{model_name}.model")
+
+def showRewardFunction():
+    input_trained_model = None
+    while True:
+        input_trained_model = input("Name the folder of the reward function model: \n")
+        if os.path.exists(f"../data/rewardFunctionData/{input_trained_model}"):
+            print("\n")
+            break
+        else:
+            print("Invalid file name. Try again\n")
+
+    env, _, _ = settings.load_environment(f"../data/rewardFunctionData/{input_trained_model}", render_mode="human")
+    model = settings.load_model(f"../data/rewardFunctionData/{input_trained_model}")
+
+    theta = None
+
+    with open(f"../data/rewardFunctionData/{input_trained_model}/reward_function.data", 'rb') as file:
+        theta = pickle.load(file)
+
+    env.reward_function = "max_entropy"
+    env.max_entropy_configure(theta)
+
+    for i in range(env.observation_space.n):
+        for j in range(env.action_space.n):
+            f = env.transform_state_action_to_feature(i, j)
+            print(f"state: {i}, action: {j}: feature: {f} reward: {theta@f}")
 
 def main():
     logo = """
@@ -336,20 +418,29 @@ def main():
     print(logo+welcomeText)
 
     input_train_or_evaluate = helper.get_valid_input("Choose one of the following options?  \
-                                                     \n1)Train an agent \
-                                                     \n2)Evaluate an agent \
-                                                     \n3)Create demonstration data \
-                                                     \n4)Show demonstration data\n", \
-                                                     ["1","2", "3", "4"])
-    
+                                                     \n1) Train an agent \
+                                                     \n2) Evaluate an agent \
+                                                     \n3) Create demonstration data \
+                                                     \n4) Show demonstration data \
+                                                     \n5) Perform inverse RL to learn reward function \
+                                                     \n6) Show reward function \
+                                                     \n7) Run model with learned reward function \n",\
+                                                     ["1","2", "3", "4", "5", "6", "7"])
+
     if input_train_or_evaluate == "1":
         train() 
     elif input_train_or_evaluate == "2":
         evaluate() 
     elif input_train_or_evaluate == "3":
         create_demonstration_data()
-    else:
+    elif input_train_or_evaluate == "4":
         show_demonstration_data() 
+    elif input_train_or_evaluate == "5":
+        inverse_RL() 
+    elif input_train_or_evaluate == "6":
+        showRewardFunction() 
+    else:
+        show_inverse_RL() 
 
 if __name__ == "__main__":
     main()

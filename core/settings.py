@@ -3,10 +3,8 @@ import numpy as np
 import os
 
 # import environments
-from environment.openAI.frozenlake_env import create_frozen_lake_environment, save_frozen_lake_env, load_frozen_lake_env, get_action_names_frozen_lake_environment
-from environment.openAI.frozenlake_env import create_frozen_lake_environment, save_frozen_lake_env, load_frozen_lake_env, get_action_names_frozen_lake_environment
-from environment.custom.trustgame_env import create_trustgame_environment, save_trustgame_env, load_trustgame_env
-from environment.openAI.mountainCar_env import create_mountain_car_environment, save_mountain_car_env, load_mountain_car_env, get_action_names_mountain_car_environment
+from environment.openAI.frozenlake_env import FrozenLake
+from environment.custom.trustgame_env import create_trustgame_environment, save_trustgame_env, load_trustgame_env, get_action_names_trust_game_environment
 from environment.openAI.mountainCar_env import create_mountain_car_environment, save_mountain_car_env, load_mountain_car_env, get_action_names_mountain_car_environment
 
 # import rl models
@@ -17,20 +15,18 @@ from models.custom.modelfree_RL.tabular.montecarlo import MonteCarlo
 from models.custom.modelbased_RL.dynaQ import DynaQ
 
 # Stablebaselines3
-from models.openAI.dqn import create_dqn_model, load_dqn_model
-from models.openAI.ars import create_ars_model, load_ars_model
-from models.openAI.ppo import create_ppo_model, load_ppo_model
+from models.stableBaselines3.dqn import create_dqn_model, load_dqn_model
+from models.stableBaselines3.ars import create_ars_model, load_ars_model
+from models.stableBaselines3.ppo import create_ppo_model, load_ppo_model
 
-list_of_openAI_environments = {
-    "FrozenLake-v1": ["Discrete", "Discrete"],
-    "MountainCar-v0": ["Box", "Discrete"]
-}
 
-list_of_custom_environments = {
+frozenlake = "FrozenLake-v1"
+
+list_of_environments = {
+    frozenlake: ["Discrete", "Discrete"],
+    "MountainCar-v0": ["Box", "Discrete"],
     "Trustgame": ["Discrete", "Discrete"],
 }
-
-
 
 models_compatibility_action_space = {
     "Box": ["ARS","PPO"],
@@ -46,72 +42,51 @@ models_compatibility_observation_space = {
     "MultiBinary": ["DQN", "ARS","PPO"],
 }
 
-def create_custom_environment(environment_name, folder_path):
+def create_environment(environment_name, folder_path):
     env = None
     parameters = None
+
     if environment_name == "Trustgame":
         env, parameters = create_trustgame_environment()
         save_trustgame_env(f"{folder_path}/{environment_name}.environment", parameters)
-    else:
-        pass
-
-    # specify more environments
-    return env, parameters
-
-def create_openAI_environment(environment_name, folder_path):
-    env = None
-    parameters = None
-    
-    if environment_name == "FrozenLake-v1":
-        env, parameters = create_frozen_lake_environment()
-        save_frozen_lake_env(f"{folder_path}//{environment_name}.environment", parameters)
+    elif environment_name == "FrozenLake-v1":
+        env = FrozenLake.create_environment(render_mode="rgb_array")
+        env.save_environment(f"{folder_path}/{environment_name}.environment")
     elif environment_name == "MountainCar-v0":
         env, parameters = create_mountain_car_environment()
-        save_mountain_car_env(f"{folder_path}//{environment_name}.environment", parameters)
+        save_mountain_car_env(f"{folder_path}/{environment_name}.environment", parameters)
     else:
         pass
 
     # specify more environments
     return env, parameters
 
-def create_model_and_learn(model_name, folder_name, num_episodes, env):
-    model = None
+def create_model(model_name, env):
+    model = None 
     if model_name == "QLearning":
         model = Qlearning.create_model(env)
-        model.learn(num_episodes)
-        model.save(f"../trained_models/{folder_name}/{model_name}.model")
-
     elif model_name == "Sarsa":
         model = Sarsa.create_model(env)
-        model.learn(num_episodes)
-        model.save(f"../trained_models/{folder_name}/{model_name}.model")
-
     elif model_name == "Montecarlo":
         model = MonteCarlo.create_model(env)
-        model.learn(num_episodes)
-        model.save(f"../trained_models/{folder_name}/{model_name}.model")
-
     elif model_name == "DQN":
         model = create_dqn_model(env)
-        model.learn(total_timesteps=num_episodes)
-        model.save(f"../trained_models/{folder_name}/{model_name}")
-
     elif model_name == "ARS":
         model = create_ars_model(env)
-        model.learn(total_timesteps=num_episodes)
-        model.save(f"../trained_models/{folder_name}/{model_name}")
-
     elif model_name == "PPO":
         model = create_ppo_model(env)
-        model.learn(total_timesteps=num_episodes, reset_num_timesteps= False)
-        model.save(f"../trained_models/{folder_name}/{model_name}")
-
     elif model_name == "DynaQ":
         model = DynaQ.create_model(env)
-        model.learn(num_episodes)
-        model.save(f"../trained_models/{folder_name}/{model_name}.model")
 
-def load_environment(folder_path):
+    return model
+
+def create_model_and_learn(model_name, folder_name, num_episodes, env):
+    model = create_model(model_name, env)
+
+    model.learn(num_episodes)
+    model.save(f"../data/trainedModels/{folder_name}/{model_name}.model")
+
+def load_environment(folder_path, render_mode ="human"):
     """
     Loads environment from the trained model folder
 
@@ -135,13 +110,13 @@ def load_environment(folder_path):
     path = f"{folder_path}/{content[idx]}"
 
     if environment_name == "FrozenLake-v1":
-        env, parameters = load_frozen_lake_env(path)
+        env = FrozenLake.load_environment(path, render_mode)
     elif environment_name == "Trustgame":
         env, parameters = load_trustgame_env(path)
     elif environment_name == "MountainCar-v0":
         env, parameters = load_mountain_car_env(path)
 
-    return env, parameters
+    return env, env.parameters, environment_name
 
 def load_model(folder_name):
     """
@@ -181,10 +156,9 @@ def load_model(folder_name):
     
     return model
     
-
 def load_demonstration_data(folder_path):
     """
-    Loads demonstration data from the demonstration_data folder
+    Loads demonstration data from the demonstrationData folder
 
     parameters:
 
@@ -219,8 +193,10 @@ def get_action_names(env_name):
         name of the environment
     """
     if env_name ==  "FrozenLake-v1":
-        return get_action_names_frozen_lake_environment()
+        return FrozenLake.get_action_names()
     elif env_name == "MountainCar-v0":
         return get_action_names_mountain_car_environment()
+    elif env_name == "Trustgame":
+        return get_action_names_trust_game_environment()
     else:
         pass

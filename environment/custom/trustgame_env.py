@@ -310,3 +310,18 @@ def save_trustgame_env(file_path, parameters):
 
     with open(file_path, 'wb') as file:
         pickle.dump(parameters, file)
+
+def get_action_names_trust_game_environment():
+    """
+    Get the list of names for the actions 
+    """
+    action_names = {
+        0: "Don't invest",
+        1: "Invest 10",
+        2: "Invest 20",
+        3: "Invest 30",
+        4: "Invest 40",
+        5: "Invest 50",
+    }
+
+    return action_names

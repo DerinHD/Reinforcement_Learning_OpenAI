@@ -8,7 +8,6 @@ import core.helper as helper
 Create Deep Q Network (DQN) via terminal. For more details, view https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html. 
 """
 
-
 @staticmethod
 def create_dqn_model(env:gym.Env):
     print("Specify parameters for the dqn model")
