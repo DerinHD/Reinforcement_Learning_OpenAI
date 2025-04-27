@@ -284,9 +284,9 @@ def create_demonstration_data():
                     if event.key in key_to_action and key_to_action[event.key] in action_names.keys():
                         action = key_to_action[event.key]  
 
-                        observation, reward, terminated, truncated, info = env.step(action)
+                        observation, reward, terminated, truncated, info = env.perform_step(action)
 
-                        transitions[i] = [obs, action]
+                        transitions[i] = [obs, action, reward]
 
                         episode_over = terminated or truncated
 
@@ -300,8 +300,8 @@ def create_demonstration_data():
             done = True
 
 
-    #with open(f"../data/demonstrationData/{input_foldername}/demonstration.data", 'wb') as file:
-    #    pickle.dump(demonstration_data, file)
+    with open(f"../data/demonstrationData/{input_foldername}/demonstration.data", 'wb') as file:
+        pickle.dump(demonstration_data, file)
 
     print("Finish")
 

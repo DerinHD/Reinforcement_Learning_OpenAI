@@ -19,6 +19,8 @@ from models.stableBaselines3.dqn import create_dqn_model, load_dqn_model
 from models.stableBaselines3.ars import create_ars_model, load_ars_model
 from models.stableBaselines3.ppo import create_ppo_model, load_ppo_model
 
+from stable_baselines3.common.callbacks import StopTrainingOnMaxEpisodes
+
 
 frozenlake = "FrozenLake-v1"
 
@@ -63,12 +65,17 @@ def create_environment(environment_name, folder_path):
 
 def create_model(model_name, env):
     model = None 
+    custom = False
+
     if model_name == "QLearning":
         model = Qlearning.create_model(env)
+        custom = True
     elif model_name == "Sarsa":
         model = Sarsa.create_model(env)
+        custom = True
     elif model_name == "Montecarlo":
         model = MonteCarlo.create_model(env)
+        custom = True
     elif model_name == "DQN":
         model = create_dqn_model(env)
     elif model_name == "ARS":
@@ -78,12 +85,16 @@ def create_model(model_name, env):
     elif model_name == "DynaQ":
         model = DynaQ.create_model(env)
 
-    return model
+    return model, custom
 
 def create_model_and_learn(model_name, folder_name, num_episodes, env):
-    model = create_model(model_name, env)
+    model, custom = create_model(model_name, env)
 
-    model.learn(num_episodes)
+    if custom:
+        model.learn(num_episodes)
+    else:
+        stop_cb = StopTrainingOnMaxEpisodes(max_episodes=num_episodes, verbose=1)
+        model.learn(total_timesteps=int(1e8), callback=stop_cb)
     model.save(f"../data/trainedModels/{folder_name}/{model_name}.model")
 
 def load_environment(folder_path, render_mode ="human"):

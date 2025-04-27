@@ -64,7 +64,7 @@ class BaseEnvironment(ABC, gym.Env):
         else:
             self.reward_Function = reward_Function
 
-    def perform_step(self, action):
+    def step(self, action):
         """
         Perform an action in the environment. Additionally, use another reward function.
 
@@ -91,16 +91,13 @@ class BaseEnvironment(ABC, gym.Env):
             Additional info about taking a step
         """
 
-        next_state, reward , termination, truncation, info = self.step(action) # perform step 
+        next_state, reward , termination, truncation, info = super().step(action) # perform step 
 
         rewardUsed = reward
 
         if self.reward_Function == "MaxEntropy":
             feature= self.transform_state_action_to_feature(self.current_state, action)
             reward = feature @ self.theta
-
-        if self.round == 500:
-            truncation = True
 
         self.round += 1
         self.current_state = next_state   

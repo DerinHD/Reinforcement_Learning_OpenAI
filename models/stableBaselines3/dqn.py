@@ -23,9 +23,11 @@ def create_dqn_model(env:gym.Env):
     
     learning_rate = helper.valid_parameter("Learning rate", float, [0,1])
     gamma = helper.valid_parameter("Discount factor", float, [0,1])
-    epsilon = helper.valid_parameter("Initial Exploration rate", float, [0,1])
+    epsilon_init = helper.valid_parameter("Initial Exploration rate", float, [0,1])
+    epsilon_fraction = helper.valid_parameter("exploration_fraction", float, [0,1])
+    epsilon_end = helper.valid_parameter("Final Exploration rate", float, [0,1])
 
-    return DQN(policy=input_policy, learning_rate=learning_rate, gamma= gamma,exploration_initial_eps= epsilon, env=env, verbose=1)
+    return DQN(policy=input_policy, learning_rate=learning_rate, gamma= gamma,exploration_initial_eps= epsilon_init, exploration_fraction=epsilon_fraction,exploration_final_eps=epsilon_end,env=env, verbose=1)
 
 
 @staticmethod

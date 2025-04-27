@@ -80,7 +80,7 @@ class Qlearning(BaseModel):
         Create a model from terminal
 
     """
-    def __init__(self, env: gym.Env, learning_rate: float, gamma: float, epsilon: float):
+    def __init__(self, env, learning_rate: float, gamma: float, epsilon: float):
         self.env = env
         self.learning_rate = learning_rate
         self.gamma = gamma
