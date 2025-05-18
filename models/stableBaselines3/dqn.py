@@ -36,8 +36,6 @@ class DQNModel(BaseModel):
         epsilon_init = helper.valid_parameter("Initial Exploration rate", float, [0, 1])
         epsilon_fraction = helper.valid_parameter("Exploration fraction", float, [0, 1])
         epsilon_end = helper.valid_parameter("Final Exploration rate", float, [0, 1])
-
-        # Additional DQN config
         buffer_size           = helper.valid_parameter("Replay buffer size", int, [1, np.inf])
         batch_size            = helper.valid_parameter("Batch size", int, [1, np.inf])
         learning_starts       = helper.valid_parameter("Learning starts after", int, [0, np.inf])
