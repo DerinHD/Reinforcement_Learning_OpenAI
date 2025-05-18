@@ -5,3 +5,5 @@ This chapter introduces the RL codebase, a framework that provides user-friendly
 For more information about the **internal structure of the code base** and the **setup of the project**, view the pdf document **RL_codebase_documentation** which is included in the root of the project folder.
 
 **If there are any questions, improvements or ideas for new models, feel free to contact me.**
+
+Note: I have used the GitHub Copilot extension tool from Visual Studio Code as a support to generate and document code.
