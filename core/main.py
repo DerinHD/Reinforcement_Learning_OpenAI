@@ -8,16 +8,16 @@ from collections import defaultdict
 # OpenAi wrappers
 from gymnasium.wrappers import RecordVideo # used to record training as video
 from stable_baselines3.common.monitor import Monitor # used to monitor rewards during training
-from inverseRL.max_entropy import max_entropy
+from inverseRL.approx_IRL import approx_IRL
 
 import helper
 import pygame
 
 """
-This file allows the user to train or evaluate a model on a specific environment via terminal.
-The model as well as the environment can be custom or from the OpenAI gymnasium/stablebaselines3 library.
-
 -------------------------------------------------------------------
+This file contains the main function of the project
+-------------------------------------------------------------------
+
 Option 1: User chooses to train a model:
 
 Input:
@@ -31,10 +31,10 @@ Note:
     - You can't enter a name which already exists in the trained_models/ folder. Just delete the existing folder if you want to use the name)
     
 Output:
-- The trained model will be saved in the folder trained_models/.
+- The trained model will be saved in the folder trainedModels/.
 - The folder contains
     - <environment_name>.environment: parameters of the environment
-    - <model_name>.model: saved rl model
+    - <model_name>.model: saved RL model
     - rewards.data: rewards for each episode in the training process
 
 -------------------------------------------------------------------
@@ -44,7 +44,66 @@ Input:
 - Enter folder name of trained mode
 
 Output: 
+- An episode will be shown with the trained models
+
+-------------------------------------------------------------------
+
+Option 3: User chooses to create demonstration data for inverse reinforcement learning:
+Input:
+- Enter folder name of demonstration data
+- Choose environment and configure its parameters
+Output:
+- The demonstration data will be saved in the folder demonstrationData/.
+- The folder contains
+    - <environment_name>.environment: parameters of the environment
+    - demonstration.data: demonstration data for inverse reinforcement learning
+- The demonstration data is saved in a dictionary with the following structure:
+    - {episode_number: {step_number: (state, action, reward)}}
+    - The state is the observation of the environment
+    - The action is the action taken by the model
+    - The reward is the reward received by the model
+
+-------------------------------------------------------------------
+
+Option 4: User chooses to show demonstration data:
+Input:
+- Enter folder name of demonstration data
+Output:
+- The demonstration data will be shown in the terminal
+- The demonstration data contains the state, action and reward for each step in the episode
+
+-------------------------------------------------------------------
+
+Option 5: User chooses to perform inverse reinforcement learning:
+Input:
+- Enter folder name of demonstration data
+- Enter folder name of reward function data
+Output:
+- The reward function will be saved in the folder rewardFunctionData/.
+- The folder contains
+    - <environment_name>.environment: parameters of the environment
+    - reward_function.data: reward function for the environment
+    - <model_name>.model: saved RL model trained on the reconstructed reward function
+- The reward function is learned from the demonstration data using inverse reinforcement learning
+
+-------------------------------------------------------------------
+Option 6: User chooses to show reward function:
+Input:
+- Enter folder name of reward function data
+Output:
+- The reward function will be shown in the terminal
+- The reward function is the learned reward function from the inverse reinforcement learning
+-------------------------------------------------------------------
+Option 7: User chooses to run a model with the learned reward function:
+Input:
+- Enter folder name of reward function data
+Output:
 - An episode will be shown with the trained model
+-------------------------------------------------------------------
+
+Example how to use the module:
+cd into the directory where the file is located and run the following command:
+python main.py
 -------------------------------------------------------------------
 
 """
@@ -84,7 +143,7 @@ def train():
 
     # get a list of models which are compatible with the chosen environment by looking at the observation and action spaces 
     list_of_compatible_models = np.intersect1d(settings.models_compatibility_observation_space[env_spaces[0]], settings.models_compatibility_action_space[env_spaces[1]])
-
+    print(list_of_compatible_models)
     # 5. User decides which of the compatible models he wants to use
     prompt ="Which of the following compatible models do you want to use?\n"
     pairs, single_choice_prompt = helper.create_single_choice(list_of_compatible_models)
@@ -108,8 +167,10 @@ def train():
             except AttributeError:
                 print("Video not supported")
         else:
-            pass
-            #TODO
+            try:
+                env = helper.TextRecordWrapper(env, f"../data/trainedModels/{input_foldername}/recordings", episode_trigger=lambda e: e in episodes_to_record)
+            except AttributeError:
+                print("Text recording not supported")
     print(env)
 
     print("Train_model...\n")
@@ -126,42 +187,56 @@ def train():
 
 
 def evaluate():
-    # 1. Enter folder ncreate_demonstration_dataame of trained model
-    input_trained_model = None
-    while True:
-        input_trained_model = input("Name the folder of the trained model: \n")
-        if os.path.exists(f"../data/trainedModels/{input_trained_model}"):
-            print("\n")
-            break
-        else:
+    folder_names = []
+    while True: 
+        folder_name = input(f"Name folder of trained model: \nAnswer: ")
+        try:
+            if os.path.exists(f"../data/trainedModels/{folder_name}") and folder_name not in folder_names:
+                folder_names.append(folder_name)
+
+                input_stop = helper.get_valid_input("\nStop (If not, you can enter more trained models for comparison)?\n1)Yes\n2)No", ["1", "2"])
+                if input_stop == "1":
+                    break
+            else:
+                raise Exception
+        except Exception as e:
             print("Invalid file name. Try again\n")
 
-    # 2. Load environment and model
-    env, _, _ = settings.load_environment(f"../data/trainedModels/{input_trained_model}")
-    model = settings.load_model(f"../data/trainedModels/{input_trained_model}")
+    for input_trained_model in folder_names:
+        # 2. Load environment and model
+        env, _, _ = settings.load_environment(f"../data/trainedModels/{input_trained_model}")
+        model = settings.load_model(f"../data/trainedModels/{input_trained_model}")
 
-    print("Run an episode")
+        n_eval_episodes = 1 # number of episodes to evaluate the model
+        episode_rewards = []
+        for i in range(n_eval_episodes):
+            total_rewards = 0
 
-    obs,_ = env.reset()
+            print("Run an episode")
 
-    episode_over = False
-    while not episode_over:
-        action = None
-        result = model.predict(obs)
-        if isinstance(result, tuple):
-            action, _ = result
-        else:
-            action = result
+            obs,_ = env.reset()
 
-        action = action.item()
+            episode_over = False
+            while not episode_over:
+                action = None
+                result = model.predict(obs)
+                if isinstance(result, tuple):
+                    action, _ = result
+                else:
+                    action = result
 
-        observation, reward, terminated, truncated, info = env.step(action)
+                action = action.item()
 
-        episode_over = terminated or truncated
-        env.render()
-        obs = observation
+                observation, reward, terminated, truncated, info = env.step(action)
+                total_rewards+= reward
 
-    print("Finish")
+                episode_over = terminated or truncated
+                env.render()
+                obs = observation
+
+            episode_rewards.append(total_rewards)
+            
+        print("Finish")
 
 def show_inverse_RL():
     input_trained_model = None
@@ -284,7 +359,7 @@ def create_demonstration_data():
                     if event.key in key_to_action and key_to_action[event.key] in action_names.keys():
                         action = key_to_action[event.key]  
 
-                        observation, reward, terminated, truncated, info = env.perform_step(action)
+                        observation, reward, terminated, truncated, info = env.step(action)
 
                         transitions[i] = [obs, action, reward]
 
@@ -362,7 +437,10 @@ def inverse_RL():
     model_name = pairs[input_model_idx]
     model = settings.create_model(model_name, env)
 
-    theta, model = max_entropy(model, demonstration_data, num_iterations = 300, alpha = 0.1)
+    num_episodes_train = helper.valid_parameter("Number of episodes to train the model", int, [1, np.inf])
+    num_episodes_simulate = helper.valid_parameter("Number of episodes to simulate the model", int, [1, np.inf])
+
+    theta, model = approx_IRL(model, demonstration_data, num_iterations = 300, alpha = 0.1, num_episodes_train=num_episodes_train,num_episodes_simulate=num_episodes_simulate)
 
     with open(f"../data/rewardFunctionData/{save_folder_name}/reward_function.data", 'wb') as file:
         pickle.dump(theta, file)
@@ -400,14 +478,12 @@ def showRewardFunction():
 
 def main():
     logo = """
-  _____  _         ____                              _____    _____          _      _                    
- |  __ \| |       / __ \                       /\   |_   _|  / ____|        | |    | |                   
- | |__) | |      | |  | |_ __   ___ _ __      /  \    | |   | |     ___   __| | ___| |__   __ _ ___  ___ 
- |  _  /| |      | |  | | '_ \ / _ \ '_ \    / /\ \   | |   | |    / _ \ / _` |/ _ \ '_ \ / _` / __|/ _ \\
- | | \ \| |____  | |__| | |_) |  __/ | | |  / ____ \ _| |_  | |___| (_) | (_| |  __/ |_) | (_| \__ \  __/
- |_|  \_\______|  \____/| .__/ \___|_| |_| /_/    \_\_____|  \_____\___/ \__,_|\___|_.__/ \__,_|___/\___|
-                        | |                                                                              
-                        |_|                                                                                                                         
+  _____  _          _____          _      _                    
+ |  __ \| |        / ____|        | |    | |                   
+ | |__) | |       | |     ___   __| | ___| |__   __ _ ___  ___ 
+ |  _  /| |       | |    / _ \ / _` |/ _ \ '_ \ / _` / __|/ _ \\
+ | | \ \| |____   | |___| (_) | (_| |  __/ |_) | (_| \__ \  __/
+ |_|  \_\______|   \_____\___/ \__,_|\___|_.__/ \__,_|___/\___|                                                                                                                                       
         """
 
     welcomeText = "\nWelcome to my reinforcement learning Open AI codebase. \
@@ -417,27 +493,34 @@ def main():
     
     print(logo+welcomeText)
 
-    input_train_or_evaluate = helper.get_valid_input("Choose one of the following options?  \
-                                                     \n1) Train an agent \
-                                                     \n2) Evaluate an agent \
-                                                     \n3) Create demonstration data \
-                                                     \n4) Show demonstration data \
-                                                     \n5) Perform inverse RL to learn reward function \
-                                                     \n6) Show reward function \
-                                                     \n7) Run model with learned reward function \n",\
-                                                     ["1","2", "3", "4", "5", "6", "7"])
+    prompt = "What do you want to do?\n"
 
-    if input_train_or_evaluate == "1":
+    main_options = [
+        "Train an agent",
+        "Evaluate an agent",
+        "Create demonstration data",
+        "Show demonstration data",
+        "Perform inverse RL to learn reward function",
+        "Show reward function",
+        "Run model with learned reward function"    
+    ]
+
+    pairs, single_choice_prompt = helper.create_single_choice(main_options)
+
+    input_single_choice_idx = helper.get_valid_input(prompt + single_choice_prompt,  pairs.keys()) # get index of environment 
+    main_name = pairs[input_single_choice_idx]
+
+    if main_name == main_options[0]:
         train() 
-    elif input_train_or_evaluate == "2":
+    elif main_name == main_options[1]:  
         evaluate() 
-    elif input_train_or_evaluate == "3":
+    elif main_name == main_options[2]:
         create_demonstration_data()
-    elif input_train_or_evaluate == "4":
+    elif main_name == main_options[3]:
         show_demonstration_data() 
-    elif input_train_or_evaluate == "5":
+    elif main_name == main_options[4]:
         inverse_RL() 
-    elif input_train_or_evaluate == "6":
+    elif main_name == main_options[5]:
         showRewardFunction() 
     else:
         show_inverse_RL() 

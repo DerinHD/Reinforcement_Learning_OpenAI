@@ -4,39 +4,53 @@ import numpy as np
 import gymnasium as gym
 import math
 
+from core import helper
+from environment.baseEnvironment import BaseEnvironment
+
 """
-Create, save and load Custom Trust game environment.
-More details about environment can be found here at trust_game.pdf 
+This is a custom environment for the trust game, compatible with OpenAI Gymnasium.
+
+#Example how to use this environment:
+Option 1: Create from terminal
+env = TrustGameEnv.create_environment(render_mode="human")
+Option 2: Create manually
+env = TrustGameEnv(num_rounds=10, render_mode="human")
+-------------------------------------------------------------
 """
 
 # Probability of state transitions for the trustee.
 # State transition probability is dependent on (state, action) with state= [1,2,3] an action = [0,10,20,30,40,50]
 state_transition_probabilites = {
     # High cooperation (State 0)
-    (0, 0): {0: 0.2, 1: 0.4, 2: 0.4},
-    (0, 10): {0: 0.3, 1: 0.4, 2: 0.3},
-    (0, 20): {0: 0.5, 1: 0.3, 2: 0.2},
-    (0, 30): {0: 0.6, 1: 0.3, 2: 0.1},
-    (0, 40): {0: 0.7, 1: 0.2, 2: 0.1},
-    (0, 50): {0: 0.7, 1: 0.2, 2: 0.1},
+    (0, 0):  {0: 0.60, 1: 0.30, 2: 0.10},
+    (0, 10): {0: 0.65, 1: 0.25, 2: 0.10},
+    (0, 20): {0: 0.70, 1: 0.20, 2: 0.10},
+    (0, 30): {0: 0.75, 1: 0.18, 2: 0.07},
+    (0, 40): {0: 0.78, 1: 0.17, 2: 0.05},
+    (0, 50): {0: 0.80, 1: 0.15, 2: 0.05},
 
     # Neutral (State 1)
-    (1, 0): {0: 0.1, 1: 0.3, 2: 0.6},
-    (1, 10): {0: 0.2, 1: 0.3, 2: 0.5},
-    (1, 20): {0: 0.3, 1: 0.4, 2: 0.3},
-    (1, 30): {0: 0.3, 1: 0.4, 2: 0.3},
-    (1, 40): {0: 0.6, 1: 0.3, 2: 0.1},
-    (1, 50): {0: 0.7, 1: 0.2, 2: 0.1},
+    (1, 0):  {0: 0.20, 1: 0.60, 2: 0.20},
+    (1, 10): {0: 0.25, 1: 0.55, 2: 0.20},
+    (1, 20): {0: 0.30, 1: 0.50, 2: 0.20},
+    (1, 30): {0: 0.35, 1: 0.45, 2: 0.20},
+    (1, 40): {0: 0.40, 1: 0.45, 2: 0.15},
+    (1, 50): {0: 0.45, 1: 0.45, 2: 0.10},
 
     # Low cooperation (State 2)
-    (2, 0): {0: 0.5, 1: 0.5, 2: 0.0},
-    (2, 10): {0: 0.4, 1: 0.4, 2: 0.2},
-    (2, 20): {0: 0.1, 1: 0.3, 2: 0.6},
-    (2, 30): {0: 0.1, 1: 0.3, 2: 0.6},
-    (2, 40): {0: 0.05, 1: 0.25, 2: 0.7},
-    (2, 50): {0: 0.0, 1: 0.2, 2: 0.8},
+    (2, 0):  {0: 0.10, 1: 0.30, 2: 0.60},
+    (2, 10): {0: 0.15, 1: 0.35, 2: 0.50},
+    (2, 20): {0: 0.20, 1: 0.40, 2: 0.40},
+    (2, 30): {0: 0.25, 1: 0.45, 2: 0.30},
+    (2, 40): {0: 0.30, 1: 0.50, 2: 0.20},
+    (2, 50): {0: 0.35, 1: 0.50, 2: 0.15},
 }
 
+
+# Mapping of state to string
+# State 0: High cooperation (Trustee is more likely to return a high payback)
+# State 1: Neutral
+# State 2: Low cooperation (Trustee is more likely to return a low payback))
 def state_to_string(state):
     """
     Convert state to string
@@ -45,6 +59,9 @@ def state_to_string(state):
     
     state:
         trustee state (0,1 or 2)
+
+    returns:
+        string representation of the state
     """
     dict_state = {
      0: "High Cooperation",
@@ -54,6 +71,7 @@ def state_to_string(state):
 
     return dict_state[state]
 
+# Probability of payback based on the state and investment
 def get_payback_probabilities(state, investment):
     """
     Probability of the payback.
@@ -66,21 +84,26 @@ def get_payback_probabilities(state, investment):
 
     investment:
         action of the investor
+
+    returns:
+        probabilities of payback
     """
-    max_payback = 3 * investment
+
+    max_payback = 3 * investment # maximum possible payback (0, 10, 20, 30, 40, 50) * 3
     possible_paybacks = list(range(0, max_payback + 1))  # All integers from 0 to 3 * investment
 
-    probabilities = {}
+    probabilities = {} # probabilities of payback. Dictionary with keys = payback and values = probability
 
     if state == 0:  # High cooperation => polynomial curve with higher probability to get high payback
         power = 5 # change this parameter to modify curve
         
-        probabilities = {p: (p ** power) for p in possible_paybacks}
-        total_weight = sum(probabilities.values())
+        probabilities = {p: (p ** power) for p in possible_paybacks} # polynomial curve
+        total_weight = sum(probabilities.values()) # sum of all probabilities 
+        # Normalize the probabilities to sum to 1
         probabilities = {p: prob / total_weight for p, prob in probabilities.items()}
 
     elif state == 1: # Neutral => normal distribution to 
-        mean = investment / 2  
+        mean = (investment * 3) / 2  
         
         std_dev = investment / 4  # change this parameter to modify curve
 
@@ -91,18 +114,21 @@ def get_payback_probabilities(state, investment):
     elif state == 2:  # Low cooperation => polynomial curve with higher probability to get low payback
         power = 5  # change this parameter to modify curve
         
-        probabilities = {p: ((max_payback - p) ** power) for p in possible_paybacks}
-        total_weight = sum(probabilities.values())  
-        probabilities = {p: prob / total_weight for p, prob in probabilities.items()}
+        probabilities = {p: ((max_payback - p) ** power) for p in possible_paybacks} # polynomial curve
+        total_weight = sum(probabilities.values())  # sum of all probabilities
+        probabilities = {p: prob / total_weight for p, prob in probabilities.items()} # Normalize the probabilities to sum to 1
 
     else:
         raise ValueError("Invalid state")
 
     return probabilities
 
-class TrustGameEnv(gym.Env):
+class TrustGameEnv(BaseEnvironment):
     """
-    Trustgame compatible with Open AI gymnasium library
+    The trust game is a two-player game where one player (the investor) decides how much money to invest in the other player (the trustee).
+    The trustee then decides how much of the invested money to return to the investor.
+    The environment simulates the trustee's behavior based on their cooperation state (high, neutral, low) and the investor's investment.
+
     -------------------------------------------------------------
     Attributes:
 
@@ -123,40 +149,12 @@ class TrustGameEnv(gym.Env):
 
     qtable: np.ndarray
         The qtable for storing the expected rewards for state-action pairs
-
-    action_space:
-        Action space of environment
-
-    observation_space:
-        Observation space of environment
-        
-
     -------------------------------------------------------------
-
-    Methods:
-
-    reset:
-        Reset all numerical parameters to zero
-
-    step:
-        Perform an action on the environment
-
-    render:
-        Render the environment by printing the result on terminal
-
-    create_trustgame_environment:
-        Create environment by configuring its parameters via terminal
-
-    load_trustgame_env:
-        Load environment 
-
-    save_trustgame_env:
-        Save environment 
-
     """
-    def __init__(self, num_rounds, state_transition_prob = state_transition_probabilites, payback_prob = get_payback_probabilities):
-        super(TrustGameEnv, self).__init__()
+    def __init__(self, num_rounds, state_transition_prob = state_transition_probabilites, payback_prob = get_payback_probabilities, render_mode="human"):
+        BaseEnvironment.__init__(self)
 
+        self.render_mode = render_mode
         # Environment parameters 
         self.num_rounds = num_rounds # Number of rounds for the player to invest money
         
@@ -177,6 +175,8 @@ class TrustGameEnv(gym.Env):
         self.payback_prob = payback_prob # needs to be a function with parameters (state, action) (e.g. see default one on top of file)
         self.state_transition_prob = state_transition_prob # needs to be a dictionary in the format as the default one (see on top of file)
         
+        self.parameters = {"num_rounds": num_rounds}
+
         # reset the environment
         self.reset()
 
@@ -195,7 +195,7 @@ class TrustGameEnv(gym.Env):
 
         return self.current_state, {}
     
-    def step(self, action):
+    def env_step(self, action):
         """   
         Perform an action on the environment
 
@@ -203,14 +203,31 @@ class TrustGameEnv(gym.Env):
 
         action:
             investment
+
+        returns:
+            next_state:
+                Next state received from the environment
+
+            reward:
+                Reward received from the environment
+
+            done:
+                Boolean indicating the termination of the episode
+
+            truncated:
+                Boolean indicating the truncation of the episode (e.g. maximum number of steps possible)
+
+            info:
+                Additional information
         """
-        self.last_state = self.current_state # used for montitoring
-        investment = self.investment[action]
+
+        self.last_state = self.current_state # used for monitoring
+        investment = self.investment[action] # investment is the action taken by the investor
         self.invested = investment # used for montitoring
 
-        self.payback = 0
+        self.payback = 0 
 
-        if investment != 0: # Get payback probabilities only of investment is higher than zero
+        if investment != 0: # Get payback probabilities only if investment is higher than zero
             payback_prob = self.payback_prob(self.current_state, investment)
 
             paybacks = list(payback_prob.keys())
@@ -233,12 +250,12 @@ class TrustGameEnv(gym.Env):
         self.current_round += 1
         done = self.current_round >= self.num_rounds
 
-        return self.current_state, reward, done, {}, {}
+        return self.current_state, reward, done, False, {}
     
 
     def render(self, mode='human'):
         """
-        Render the environment by printing the result on terminal
+        Render the environment by printing the result on terminal.  
 
         Note: Don't provide mode as parameter
         """
@@ -249,79 +266,34 @@ class TrustGameEnv(gym.Env):
           f"New State: {state_to_string(self.current_state):<18}    "
           f"Total Reward: {self.total_reward:>1}")
 
-def create_trustgame_environment():
-    """
-    Create environment by configuring its parameters via terminal
-    """
-    print("Specify parameters for the trustgame environment")
+    @classmethod
+    def create_environment(cls, render_mode: str = "human"):
+        """
+        Create environment by configuring its parameters via terminal
+        """
+        print("Specify parameters for the trustgame environment")
 
-    parameters = []
+        num_rounds = helper.valid_parameter("Specify the value for num_rounds", int, [1, np.inf])
 
-    print("\n")
-    num_rounds = None
-    while True:
-        try:
-            user_input = input(f"Specify the value for num_rounds ({int.__name__}): \n ")
-            num_rounds = int(user_input)
-            if num_rounds <= 0:
-                raise ValueError
-            break
-        except ValueError:
-            print(f"Invalid input. Try again.")
+        return cls(num_rounds=num_rounds, render_mode=render_mode) 
+    
 
-    parameters = {"num_rounds": num_rounds}
+    @staticmethod
+    def get_action_names():
+        """
+        Get the list of names for the actions 
 
-    return TrustGameEnv(num_rounds=num_rounds), parameters
+        Returns:
+            action_names (dict):
+                Dictionary with keys = action and values = action name
+        """
+        action_names = {
+            0: "Don't invest",
+            1: "Invest 10",
+            2: "Invest 20",
+            3: "Invest 30",
+            4: "Invest 40",
+            5: "Invest 50",
+        }
 
-
-def load_trustgame_env(file_path):
-    """
-    Load environment
-
-    parameters:
-
-    file_path:
-        path of file to be load to
-
-    returns:
-        environment parameters
-    """
-
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"The file {file_path} does not exist.")
-
-    with open(file_path, 'rb') as file:
-        parameters = pickle.load(file)
-            
-    return TrustGameEnv(num_rounds=parameters["num_rounds"]), parameters
-
-def save_trustgame_env(file_path, parameters):
-    """
-    Save environment parameters
-
-    parameters:
-
-    file_path:
-        path of file to be saved at
-        
-    parameters:
-        environment parameters
-    """
-
-    with open(file_path, 'wb') as file:
-        pickle.dump(parameters, file)
-
-def get_action_names_trust_game_environment():
-    """
-    Get the list of names for the actions 
-    """
-    action_names = {
-        0: "Don't invest",
-        1: "Invest 10",
-        2: "Invest 20",
-        3: "Invest 30",
-        4: "Invest 40",
-        5: "Invest 50",
-    }
-
-    return action_names
+        return action_names

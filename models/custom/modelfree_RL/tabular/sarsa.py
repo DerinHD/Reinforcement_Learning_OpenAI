@@ -4,7 +4,7 @@ import pickle
 import os
 import gymnasium as gym
 import core.helper as helper
-from models.custom.baseModel import BaseModel
+from models.baseModel import BaseModel
 
 """
 Sarsa is a model free tabular RL algorithm which uses a Q-function to compute the expected reward and an epsilon-greedy policy 
@@ -32,7 +32,7 @@ model = Sarsa(env, learning_rate, gamma, epsilon)
 -------------------------------------------------------------
 """
 
-class Sarsa(BaseModel):
+class Sarsa(BaseModel): 
     """
     -------------------------------------------------------------
     Attributes:
@@ -78,11 +78,15 @@ class Sarsa(BaseModel):
         Create a model from terminal
 
     """
-    def __init__(self, env: gym.Env, learning_rate: float, gamma: float, epsilon: float):
+    def __init__(self, env: gym.Env, learning_rate: float, gamma: float, eps_initial: float, eps_min: float=0.01, eps_decay: float=0.999):
         self.env = env
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.eps_initial = eps_initial
+        self.eps_min = eps_min
+        self.eps_decay = eps_decay
+        self.eps = eps_initial
+
         self.reset()
 
     def update(self, state: int, action: int, reward: float, new_state: int, new_action: int):
@@ -119,6 +123,7 @@ class Sarsa(BaseModel):
         Resets the Q-table to zero
         """
         self.qtable = np.zeros((self.env.observation_space.n, self.env.action_space.n))
+        self.eps = self.eps_initial
 
     def predict(self, state: int, is_training: bool=False):
         """
@@ -134,7 +139,7 @@ class Sarsa(BaseModel):
         """
 
         # exploration
-        if np.random.random() < self.epsilon and is_training:
+        if np.random.random() < self.eps and is_training:
             action = self.env.action_space.sample()
 
         # exploitation
@@ -169,6 +174,7 @@ class Sarsa(BaseModel):
 
                 state, action = new_state, new_action # update state and action
 
+            self.eps = max(self.eps_min, self.eps * self.eps_decay)
 
     def save(self, file_path: str):
         """
@@ -215,6 +221,8 @@ class Sarsa(BaseModel):
 
         learning_rate = helper.valid_parameter("Learning rate", float, [0,1])
         gamma = helper.valid_parameter("Discount factor", float, [0,1])
-        epsilon = helper.valid_parameter("Exploration rate", float, [0,1])
+        eps_min = helper.valid_parameter("Minimum Exploration rate", float, [0,1])
+        eps_decay = helper.valid_parameter("Exploration decay rate", float, [0,1])
+        eps_initial = helper.valid_parameter("Initial Exploration rate", float, [0,1])
     
-        return Sarsa(env, learning_rate, gamma, epsilon)
+        return Sarsa(env, learning_rate, gamma, eps_initial, eps_min, eps_decay)

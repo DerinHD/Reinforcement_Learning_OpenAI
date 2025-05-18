@@ -1,20 +1,20 @@
 import os
 import gymnasium as gym
-from stable_baselines3 import PPO
+from stable_baselines3 import A2C
 from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
 
 from core import helper
 from models.baseModel import BaseModel
 
 
-class PPOModel(BaseModel):
+class A2CModel(BaseModel):
     def __init__(self, environment: gym.Env, model):
         super().__init__(environment)
         self.model = model
 
     @staticmethod
     def create_model(env: gym.Env):
-        print("Specify parameters for the PPO model")
+        print("Specify parameters for the A2C model")
 
         list_of_norm = {"0": False, "1": True}
         norm_prompt = "Normalize observations and rewards? (0: False, 1: True): "
@@ -28,53 +28,56 @@ class PPOModel(BaseModel):
         idx = helper.get_valid_input(policy_prompt + single_choice_prompt, pairs.keys())
         policy = pairs[idx]
 
-        n_steps = helper.valid_parameter("Number of steps per rollout (n_steps)", int, [1, float('inf')])
-        gae_lambda = helper.valid_parameter("GAE lambda", float, [0, 1])
-        gamma = helper.valid_parameter("Discount factor (gamma)", float, [0, 1])
-        n_epochs = helper.valid_parameter("Number of PPO epochs", int, [1, float('inf')])
+        # Entropy coefficient
         ent_coef = helper.valid_parameter("Entropy coefficient", float, [0, 1])
+        gamma = helper.valid_parameter("Discount factor (gamma)", float, [0, 1])
+        n_steps = helper.valid_parameter("Number of steps per rollout (n_steps)", int, [1, float('inf')])
         learning_rate = helper.valid_parameter("Learning rate", float, [0, 1])
+        vf_coef = helper.valid_parameter("Value function coefficient", float, [0, 1])
+        max_grad_norm = helper.valid_parameter("Max gradient norm", float, [0, 1])
+        gae_lambda = helper.valid_parameter("GAE lambda", float, [0, 1])
 
-
-        # Initialize the PPO model
-        model = PPO(
-            policy=policy,
-            env=env,
-            n_steps=n_steps,
-            batch_size=128,
-            n_epochs=n_epochs,
-            gamma=gamma,
-            gae_lambda=gae_lambda,
-            ent_coef=ent_coef,
-            verbose=1,
+        policy_kwargs = dict(
+            net_arch=[64, 64],
+            activation_fn= "relu"
         )
 
-        return PPOModel(env, model)
+        # Build model
+        model = A2C(
+            policy=policy,
+            env=env,
+            ent_coef=ent_coef,
+            verbose=1,
+            gamma=gamma,
+            n_steps=n_steps,
+            learning_rate=learning_rate,
+            vf_coef=vf_coef,
+            max_grad_norm=max_grad_norm,
+            gae_lambda=gae_lambda,
+        )
+
+        return A2CModel(env, model)
 
     def predict(self, state, is_training: bool = False):
         action, _ = self.model.predict(state, deterministic=not is_training)
         return action
 
-    def learn(self, num_episodes):
+    def learn(self, num_episodes: int = 1000):
         self.model.learn(total_timesteps=num_episodes)
-
-    def reset():
-        """
-        Resets the environment
-        """
-        pass
-
-    
 
     def save(self, file_path: str):
         self.model.save(file_path)
         print(f"Model saved to {file_path}")
+
+    def reset(self):
+        pass
 
     @staticmethod
     def load(file_path: str):
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"The file {file_path} does not exist.")
 
-        model = PPO.load(file_path)
+        # Load model
+        model = A2C.load(file_path)
 
-        return PPOModel(model.env, model)
+        return A2CModel(model.env, model)

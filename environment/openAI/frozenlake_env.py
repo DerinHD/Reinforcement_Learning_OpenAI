@@ -7,7 +7,38 @@ import numpy as np
 
 from environment.baseEnvironment import BaseEnvironment
 
+
+"""
+This file contains the frozenlake environment.
+
+
+Example how to use this environment:
+Option 1: Create from terminal
+env = FrozenLake.create_environment()
+Option 2: Create manually
+env = FrozenLake(is_slippery=True, map_size=4, seed=42, prob_frozen=0.8)
+"""
+
+
 class FrozenLake(BaseEnvironment, FrozenLakeEnv):
+    """
+    The frozenlake environment is a grid world where the agent has to reach the goal while avoiding holes.
+    The environment is slippery, meaning that the agent can slip and fall into holes.
+    The environment is a discrete action space with 4 actions: up, down, left, right.
+    The environment is a grid world with a size of map_size x map_size.
+
+    Parameters:
+    is_slippery: bool
+        If True, the environment is slippery, meaning that the agent can slip and fall into holes.
+    map_size: int
+        The size of the grid world. The environment is a grid world with a size of map_size x map_size.
+    seed: int
+        The seed for the random number generator. This is used to generate the random map.
+    prob_frozen: float
+        The probability that a tile is frozen. This is used to generate the random map.
+    render_mode: str
+        The render mode for the environment. This is used to render the environment.   
+    """
     def __init__(self, 
                  is_slippery, 
                  map_size, 
@@ -31,11 +62,21 @@ class FrozenLake(BaseEnvironment, FrozenLakeEnv):
                 'seed': seed, 
                 'prob_frozen':  prob_frozen,
         }
+
+        self.seed = seed
+
+        self.max_round = map_size * map_size * 10
     
 
     def transform_state_action_to_feature(self, state , action):
-        # Option 1: One hot encoding
-        
+        """
+        Transform the state and action to a feature vector.
+        Args:
+            state (int): The state of the environment.
+            action (int): The action taken by the agent.
+        Returns:
+            feature (numpy.ndarray): The feature vector.    
+        """
         num_states = self.observation_space.n
         num_actions = self.action_space.n
         
@@ -90,6 +131,16 @@ class FrozenLake(BaseEnvironment, FrozenLakeEnv):
         return feature
     
     def reset(self, seed=None,  options=None):
+        """
+        Reset the environment to its initial state.
+        Args:
+            seed (int): The seed for the random number generator.
+            options (dict): The options for the environment.
+        Returns:
+            state (int): The initial state of the environment.
+            obs (numpy.ndarray): The observation of the environment.
+        """
+        # Reset the environment
         state, obs = FrozenLakeEnv.reset(self, seed=seed, options=options)
 
         self.current_state = state
@@ -97,7 +148,34 @@ class FrozenLake(BaseEnvironment, FrozenLakeEnv):
 
         return state, obs
     
+    def env_step(self, action):
+        """
+        Perform a step in the environment.
+        Args:
+            action (int): The action taken by the agent.
+        Returns:
+            next_state (int): The next state of the environment.
+            reward_env (float): The reward received from the environment.
+            termination (bool): Whether the episode has terminated.
+            truncation (bool): Whether the episode has been truncated.
+            info (dict): Additional information about the environment.
+        """
+        next_state, reward_env, termination, truncation, info = FrozenLakeEnv.step(self, action)
+
+        self.round += 1
+        if self.round >= self.max_round:
+            truncation = True
+        
+        return next_state, reward_env, termination, truncation, info
+
     def create_environment(render_mode = "human"):
+        """
+        Create the frozenlake environment.
+        Args:
+            render_mode (str): The render mode for the environment.
+        Returns:"
+            env (FrozenLake): The frozenlake environment.
+        """
         print("Specify parameters for the frozenlake environment\n")
 
         is_slippery_idx = helper.get_valid_input(f"Environment is slippery \n1)True \n2)False", ["1", "2"])

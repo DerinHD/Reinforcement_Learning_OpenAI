@@ -4,8 +4,9 @@ import os
 
 # import environments
 from environment.openAI.frozenlake_env import FrozenLake
-from environment.custom.trustgame_env import create_trustgame_environment, save_trustgame_env, load_trustgame_env, get_action_names_trust_game_environment
-from environment.openAI.mountainCar_env import create_mountain_car_environment, save_mountain_car_env, load_mountain_car_env, get_action_names_mountain_car_environment
+from environment.custom.trustgame_env import TrustGameEnv
+from environment.openAI.mountainCarDiscrete_env import MountainCarDiscreteState
+from environment.openAI.mountainCarContinuous_env import MountainCarContinuousState
 
 # import rl models
 # custom
@@ -15,86 +16,142 @@ from models.custom.modelfree_RL.tabular.montecarlo import MonteCarlo
 from models.custom.modelbased_RL.dynaQ import DynaQ
 
 # Stablebaselines3
-from models.stableBaselines3.dqn import create_dqn_model, load_dqn_model
-from models.stableBaselines3.ars import create_ars_model, load_ars_model
-from models.stableBaselines3.ppo import create_ppo_model, load_ppo_model
-
-from stable_baselines3.common.callbacks import StopTrainingOnMaxEpisodes
+from models.stableBaselines3.dqn import DQNModel
+from models.stableBaselines3.a2c import A2CModel
+from models.stableBaselines3.ppo import PPOModel
 
 
+"""
+This file contains settings for the project.
+"""
+
+# List of environments
 frozenlake = "FrozenLake-v1"
+mountainCarDiscreteState = "MountainCarDiscreteState"
+mountainCarContinuousState = "MountainCarContinuousState"
+trustgame = "Trustgame"
+
+# List of models
+qlearning = "QLearning"
+sarsa = "Sarsa"
+montecarlo = "Montecarlo"
+dynaQ = "DynaQ"
+dqn = "DQN"
+a2c = "A2C"
+ppo = "PPO"
 
 list_of_environments = {
     frozenlake: ["Discrete", "Discrete"],
-    "MountainCar-v0": ["Box", "Discrete"],
-    "Trustgame": ["Discrete", "Discrete"],
+    mountainCarDiscreteState: ["Discrete", "Discrete"],
+    mountainCarContinuousState: ["Box", "Discrete"],
+    trustgame: ["Discrete", "Discrete"],
 }
 
 models_compatibility_action_space = {
-    "Box": ["ARS","PPO"],
-    "Discrete": ["QLearning", "Sarsa", "Montecarlo","DQN", "ARS","PPO", "DynaQ"],
-    "MultiDiscrete": ["PPO"],
-    "MultiBinary": ["PPO"],
+    "Box": [ppo, a2c],
+    "Discrete": [qlearning,sarsa, montecarlo,dqn,ppo,dynaQ,a2c],
+    "MultiDiscrete": [ppo,a2c],
+    "MultiBinary": [ppo, a2c],
 }
 
 models_compatibility_observation_space = {
-    "Box": ["DQN", "ARS", "PPO"],
-    "Discrete": ["QLearning", "Sarsa", "Montecarlo", "DQN", "ARS","PPO", "DynaQ"],
-    "MultiDiscrete": ["DQN", "ARS","PPO"],
-    "MultiBinary": ["DQN", "ARS","PPO"],
+    "Box": [dqn, a2c, ppo, a2c],
+    "Discrete": [qlearning,a2c,sarsa,montecarlo, dqn,ppo,dynaQ, a2c],
+    "MultiDiscrete": [dqn,a2c,ppo],
+    "MultiBinary": [dqn,ppo, a2c],
 }
 
 def create_environment(environment_name, folder_path):
+    """
+    Creates environment and saves it in the specified folder
+    parameters:
+    environment_name:
+        name of the environment
+    folder_path:
+        path to the folder where the environment should be saved
+    
+    returns:
+        env:
+            environment
+        parameters:
+            parameters of the environment
+    """         
     env = None
     parameters = None
 
-    if environment_name == "Trustgame":
-        env, parameters = create_trustgame_environment()
-        save_trustgame_env(f"{folder_path}/{environment_name}.environment", parameters)
-    elif environment_name == "FrozenLake-v1":
+    if environment_name == trustgame:
+        env = TrustGameEnv.create_environment(render_mode="rgb_array")
+    elif environment_name == frozenlake:
         env = FrozenLake.create_environment(render_mode="rgb_array")
-        env.save_environment(f"{folder_path}/{environment_name}.environment")
-    elif environment_name == "MountainCar-v0":
-        env, parameters = create_mountain_car_environment()
-        save_mountain_car_env(f"{folder_path}/{environment_name}.environment", parameters)
+    elif environment_name == mountainCarDiscreteState:
+        env = MountainCarDiscreteState.create_environment(render_mode="rgb_array")
+    elif environment_name == mountainCarContinuousState:   
+        env = MountainCarContinuousState.create_environment(render_mode="rgb_array")
+        # specify more environments
     else:
-        pass
+        raise Exception("Environment not found")
 
-    # specify more environments
+    env.save_environment(f"{folder_path}/{environment_name}.environment")
+    parameters = env.parameters
+    
     return env, parameters
 
 def create_model(model_name, env):
+    """
+    Creates model and saves it in the specified folder
+    parameters:
+    model_name:
+        name of the model
+    env:
+        environment
+    folder_path:
+        path to the folder where the model should be saved
+    returns:
+        model:
+            model
+    """
     model = None 
-    custom = False
 
-    if model_name == "QLearning":
+    if model_name == qlearning:
         model = Qlearning.create_model(env)
-        custom = True
-    elif model_name == "Sarsa":
+    elif model_name == sarsa:
         model = Sarsa.create_model(env)
-        custom = True
-    elif model_name == "Montecarlo":
+    elif model_name == montecarlo:
         model = MonteCarlo.create_model(env)
-        custom = True
-    elif model_name == "DQN":
-        model = create_dqn_model(env)
-    elif model_name == "ARS":
-        model = create_ars_model(env)
-    elif model_name == "PPO":
-        model = create_ppo_model(env)
-    elif model_name == "DynaQ":
+    elif model_name == dqn:
+        model = DQNModel.create_model(env)
+    elif model_name == a2c:
+        model = A2CModel.create_model(env)
+    elif model_name == ppo:
+        model = PPOModel.create_model(env)
+    elif model_name == DynaQ:
         model = DynaQ.create_model(env)
+    else:
+        raise Exception("Model not found")
+    
 
-    return model, custom
+    return model
 
 def create_model_and_learn(model_name, folder_name, num_episodes, env):
-    model, custom = create_model(model_name, env)
+    """
+    Creates model and learns it in the specified folder
+    parameters:
+    model_name:
+        name of the model
+    folder_name:
+        name of the folder where the model should be saved
+    num_episodes:
+        number of episodes the model should be trained
+    env:
+        environment
+    """
+    # 1. Create model
+    model = create_model(model_name, env)
 
-    if custom:
-        model.learn(num_episodes)
-    else:
-        stop_cb = StopTrainingOnMaxEpisodes(max_episodes=num_episodes, verbose=1)
-        model.learn(total_timesteps=int(1e8), callback=stop_cb)
+    # 2. Create folder for trained model
+    model.learn(num_episodes)
+    
+    # 3. Save model
     model.save(f"../data/trainedModels/{folder_name}/{model_name}.model")
 
 def load_environment(folder_path, render_mode ="human"):
@@ -105,13 +162,24 @@ def load_environment(folder_path, render_mode ="human"):
 
     folder_name:
         name of the folder where the model was trained
+    
+    render_mode:
+        render mode of the environment
+
+    returns:
+        env:
+            environment
+        parameters:
+            parameters of the environment
+        environment_name:
+            name of the environment
     """
 
     content = os.listdir(folder_path)
 
     idx = None
     for i, c in enumerate(content):
-        if len(c.split(".")) >=2:
+        if len(c.split(".")) >=2: # check if file has extension
             if c.split(".")[1] == "environment":
                 idx = i
 
@@ -120,16 +188,18 @@ def load_environment(folder_path, render_mode ="human"):
     env = None
     path = f"{folder_path}/{content[idx]}"
 
-    if environment_name == "FrozenLake-v1":
+    if environment_name == frozenlake:
         env = FrozenLake.load_environment(path, render_mode)
-    elif environment_name == "Trustgame":
-        env, parameters = load_trustgame_env(path)
-    elif environment_name == "MountainCar-v0":
-        env, parameters = load_mountain_car_env(path)
+    elif environment_name == trustgame:
+        env = TrustGameEnv.load_environment(path, render_mode)
+    elif environment_name == mountainCarDiscreteState:
+        env = MountainCarContinuousState.load_environment(path, render_mode)
+    elif environment_name == mountainCarContinuousState:
+        env = MountainCarContinuousState.load_environment(path, render_mode)
 
     return env, env.parameters, environment_name
 
-def load_model(folder_name):
+def load_model(folder_path):
     """
     Loads model from the trained model folder
 
@@ -137,32 +207,35 @@ def load_model(folder_name):
 
     folder_name:
         name of the folder where the model was trained
+
+    returns:
+        model:
+            model
     """
-    directory = f"../trained_models/{folder_name}"
-    content = os.listdir(directory)
+    content = os.listdir(folder_path)
     idx = None
     for i, c in enumerate(content):
-        if len(c.split(".")) >=2:
-            if c.split(".")[1] == "model" or c.split(".")[1] == "zip":
+        if len(c.split(".")) >=2: # check if file has extension
+            if c.split(".")[1] == "model" or c.split(".")[1] == "zip": # zip is for stable baselines3
                 idx = i
 
     model = None
     model_name = content[idx].split(".")[0]
-    path = f"{directory}/{content[idx]}"
+    path = f"{folder_path}/{content[idx]}"
 
-    if model_name == "QLearning":
+    if model_name == qlearning:
         model = Qlearning.load(path)
-    elif model_name == "Sarsa":
+    elif model_name == sarsa:
         model = Sarsa.load(path)
-    if model_name == "Montecarlo":
+    if model_name == montecarlo:
         model = MonteCarlo.load(path)
-    if model_name == "DQN":
-        model = load_dqn_model(path)
-    if model_name == "ARS":
-        model = load_ars_model(path)
-    if model_name == "PPO":
-        model = load_ppo_model(path)
-    if model_name == "DynaQ":
+    if model_name == dqn:
+        model = DQNModel.load(path)
+    if model_name == a2c:
+        model = A2CModel.load(path)
+    if model_name == ppo:
+        model = PPOModel.load(path)
+    if model_name == dynaQ:
         model = DynaQ.load(path)
     
     return model
@@ -175,13 +248,17 @@ def load_demonstration_data(folder_path):
 
     folder_name:
         name of the folder where the model was trained
+    
+    returns:
+        demonstration_data:
+            demonstration data
     """
 
     content = os.listdir(folder_path)
 
     idx = None
     for i, c in enumerate(content):
-        if len(c.split(".")) >=2:
+        if len(c.split(".")) >=2: # check if file has extension
             if c.split(".")[1] == "data":
                 idx = i
 
@@ -202,12 +279,17 @@ def get_action_names(env_name):
 
     env_name:
         name of the environment
+
+    Returns:
+        list of action names
     """
-    if env_name ==  "FrozenLake-v1":
+    if env_name == frozenlake:
         return FrozenLake.get_action_names()
-    elif env_name == "MountainCar-v0":
-        return get_action_names_mountain_car_environment()
-    elif env_name == "Trustgame":
-        return get_action_names_trust_game_environment()
+    elif env_name == mountainCarDiscreteState:
+        return MountainCarDiscreteState.get_action_names()
+    elif env_name == mountainCarContinuousState:
+        return MountainCarContinuousState.get_action_names()
+    elif env_name == trustgame:
+        return TrustGameEnv.get_action_names()
     else:
         pass

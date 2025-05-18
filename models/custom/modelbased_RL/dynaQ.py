@@ -9,7 +9,7 @@ import os
 import gymnasium as gym
 from tqdm import tqdm
 import core.helper as helper
-from models.custom.baseModel import BaseModel
+from models.baseModel import BaseModel
 
 actions = [0,10,20,30,40,50]
 states = [0,1,2]
@@ -42,7 +42,7 @@ model = DynaQ(env, learning_rate, gamma, epsilon)
 """
 
 class DynaQ(BaseModel):
-    def __init__(self, env:gym.Env, learning_rate=0.1, gamma= 0.0, epsilon= 0.1, num_planning_steps=5):
+    def __init__(self, env:gym.Env, learning_rate=0.1, gamma= 0.0, num_planning_steps=5,  eps_initial: float=1.0, eps_min: float=0.01, eps_decay: float=0.2):
         """
         -------------------------------------------------------------
         Attributes:
@@ -97,7 +97,10 @@ class DynaQ(BaseModel):
         self.action_size = env.action_space.n
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.eps_initial = eps_initial
+        self.eps_min = eps_min
+        self.eps_decay = eps_decay
+        self.eps = eps_initial
         self.num_planning_steps = num_planning_steps
         self.reset()
 
@@ -134,6 +137,7 @@ class DynaQ(BaseModel):
         """
         self.qtable = np.zeros((self.state_size, self.action_size))
         self.model = {}
+        self.eps = self.eps_initial
 
     def predict(self, state, is_training=False):
         """
@@ -148,7 +152,7 @@ class DynaQ(BaseModel):
             is set to true, if model is trained to enable exploration
         """
 
-        if np.random.random() < self.epsilon and is_training:
+        if np.random.random() < self.eps and is_training:
             action = self.env.action_space.sample()
 
         else:
@@ -188,6 +192,8 @@ class DynaQ(BaseModel):
                     self.update(plan_state, plan_action_idx, plan_reward, plan_next_state)
 
                 state = next_state
+
+            self.eps = max(self.eps_min, self.eps * self.eps_decay)
 
 
     def save(self, file_path):
@@ -236,8 +242,10 @@ class DynaQ(BaseModel):
 
         learning_rate = helper.valid_parameter("Learning rate", float, [0,1])
         gamma = helper.valid_parameter("Discount factor", float, [0,1])
-        epsilon = helper.valid_parameter("Exploration rate", float, [0,1])
+        eps_min = helper.valid_parameter("Minimum Exploration rate", float, [0,1])
+        eps_decay = helper.valid_parameter("Exploration decay rate", float, [0,1])
+        eps_initial = helper.valid_parameter("Initial Exploration rate", float, [0,1])
         num_planning_steps = helper.valid_parameter("Number of planning steps", int, [1,np.inf])
     
-        return DynaQ(env, learning_rate, gamma, epsilon, num_planning_steps)
+        return DynaQ(env, learning_rate, gamma, num_planning_steps, eps_initial, eps_min, eps_decay)
     

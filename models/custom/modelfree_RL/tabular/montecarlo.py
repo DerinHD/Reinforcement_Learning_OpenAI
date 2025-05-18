@@ -4,7 +4,7 @@ import pickle
 import os
 import gymnasium as gym
 import core.helper as helper
-from models.custom.baseModel import BaseModel
+from models.baseModel import BaseModel
 
 """
 MonteCarlo is a model free tabular RL algorithm which uses a Q-function to compute the expected reward and an epsilon-greedy policy 
@@ -77,11 +77,15 @@ class MonteCarlo(BaseModel):
         Create a model from terminal
 
     """
-    def __init__(self, env:gym.Env, learning_rate: float, gamma:float, epsilon: float):
+    def __init__(self, env, learning_rate: float, gamma: float, eps_initial: float, eps_min: float=0.01, eps_decay: float=0.999):
         self.env = env
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.eps_initial = eps_initial
+        self.eps_min = eps_min
+        self.eps_decay = eps_decay
+        self.eps = eps_initial
+
         self.returns = { (s, a): [] for s in range(self.env.observation_space.n) for a in range(self.env.action_space.n) }
         self.reset()
 
@@ -91,6 +95,7 @@ class MonteCarlo(BaseModel):
         """
         self.qtable = np.zeros((self.env.observation_space.n, self.env.action_space.n))
         self.returns = { (s, a): [] for s in range(self.env.observation_space.n) for a in range(self.env.action_space.n) }
+        self.eps = self.eps_initial
    
     def predict(self, state:int, is_training:bool=False):
         """
@@ -106,7 +111,7 @@ class MonteCarlo(BaseModel):
         """
 
         # exploration
-        if np.random.random() < self.epsilon and is_training:
+        if np.random.random() < self.eps and is_training:
             action = self.env.action_space.sample()
 
         # exploitation
@@ -158,6 +163,8 @@ class MonteCarlo(BaseModel):
             
             self.update(episode_data) # update qtable after episode was over
 
+            self.eps = max(self.eps_min, self.eps * self.eps_decay) # decay exploration rate
+
     def save(self, file_path: str):
             self.env = None
             with open(file_path, 'wb') as file:
@@ -180,8 +187,10 @@ class MonteCarlo(BaseModel):
 
         learning_rate = helper.valid_parameter("Learning rate", float, [0,1])
         gamma = helper.valid_parameter("Discount factor", float, [0,1])
-        epsilon = helper.valid_parameter("Exploration rate", float, [0,1])
+        eps_min = helper.valid_parameter("Minimum Exploration rate", float, [0,1])
+        eps_decay = helper.valid_parameter("Exploration decay rate", float, [0,1])
+        eps_initial = helper.valid_parameter("Initial Exploration rate", float, [0,1])
     
 
-        return MonteCarlo(env, learning_rate, gamma, epsilon)
+        return MonteCarlo(env, learning_rate, gamma, eps_initial, eps_min, eps_decay)
         

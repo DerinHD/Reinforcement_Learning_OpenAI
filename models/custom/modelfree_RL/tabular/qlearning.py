@@ -6,7 +6,7 @@ import pickle
 import os
 import gymnasium as gym
 import core.helper as helper
-from models.custom.baseModel import BaseModel
+from models.baseModel import BaseModel
 
 """
 QLearning is a model free tabular RL algorithm which uses a Q-function to compute the expected reward and an epsilon-greedy policy 
@@ -79,12 +79,16 @@ class Qlearning(BaseModel):
     create_model (static):
         Create a model from terminal
 
-    """
-    def __init__(self, env, learning_rate: float, gamma: float, epsilon: float):
+    """ 
+    def __init__(self, env, learning_rate: float, gamma: float, eps_initial: float, eps_min: float=0.01, eps_decay: float=0.999):
         self.env = env
         self.learning_rate = learning_rate
         self.gamma = gamma
-        self.epsilon = epsilon
+        self.eps_initial = eps_initial
+        self.eps_min = eps_min
+        self.eps_decay = eps_decay
+        self.eps = eps_initial
+
         self.reset()
 
     def update(self, state: int, action: int, reward: float, new_state: int):
@@ -122,6 +126,7 @@ class Qlearning(BaseModel):
         """
         print(f"observation space: {self.env.observation_space.n}")
         self.qtable = np.zeros((self.env.observation_space.n, self.env.action_space.n))
+        self.eps = self.eps_initial
 
     def predict(self, state: int, is_training: bool=False):
         """
@@ -137,7 +142,7 @@ class Qlearning(BaseModel):
         """
 
         # exploration
-        if np.random.random() < self.epsilon and is_training:
+        if np.random.random() < self.eps and is_training:
             action = self.env.action_space.sample()
 
         # exploitation
@@ -172,6 +177,8 @@ class Qlearning(BaseModel):
                 self.update(state, action, reward, new_state) # update qtable
 
                 state = new_state # update state 
+
+            self.eps = max(self.eps_min, self.eps * self.eps_decay)
             #print("done")
 
     def save(self, file_path: str):
@@ -188,20 +195,6 @@ class Qlearning(BaseModel):
         with open(file_path, 'wb') as file:
             pickle.dump(self, file)
         print(f"Model saved to {file_path}")
-
-        df_params = pd.DataFrame({
-            "Parameter": ["Learning Rate", "Discount Factor (Gamma)", "Exploration Rate (Epsilon)"],
-            "Value": [self.learning_rate, self.gamma, self.epsilon]
-        })
-
-        # Create DataFrame for Q-table
-        df_qtable = pd.DataFrame(self.qtable)
-
-        # Save parameters to CSV (overwrite if file exists)
-        df_params.to_csv(file_path+"ss", index=False)
-
-        # Append Q-table to the same file
-        df_qtable.to_csv(file_path+"ss", mode='a', index=False, header=False)
 
     @staticmethod
     def load(file_path: str):
@@ -236,6 +229,8 @@ class Qlearning(BaseModel):
 
         learning_rate = helper.valid_parameter("Learning rate", float, [0,1])
         gamma = helper.valid_parameter("Discount factor", float, [0,1])
-        epsilon = helper.valid_parameter("Exploration rate", float, [0,1])
+        eps_min = helper.valid_parameter("Minimum Exploration rate", float, [0,1])
+        eps_decay = helper.valid_parameter("Exploration decay rate", float, [0,1])
+        eps_initial = helper.valid_parameter("Initial Exploration rate", float, [0,1])
 
-        return Qlearning(env, learning_rate, gamma, epsilon)   
+        return Qlearning(env, learning_rate, gamma, eps_initial, eps_min, eps_decay)   
