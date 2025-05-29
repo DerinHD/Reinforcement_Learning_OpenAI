@@ -7,6 +7,7 @@ from environment.openAI.frozenlake_env import FrozenLake
 from environment.custom.trustgame_env import TrustGameEnv
 from environment.openAI.mountainCarDiscrete_env import MountainCarDiscreteState
 from environment.openAI.mountainCarContinuous_env import MountainCarContinuousState
+from environment.openAI.humanoidStandup_env import  HumanoidStandup
 
 # import rl models
 # custom
@@ -30,6 +31,7 @@ frozenlake = "FrozenLake-v1"
 mountainCarDiscreteState = "MountainCarDiscreteState"
 mountainCarContinuousState = "MountainCarContinuousState"
 trustgame = "Trustgame"
+humanoidStandup = "HumanoidStandup-v4" # not used yet, but can be added later
 
 # List of models
 qlearning = "QLearning"
@@ -45,6 +47,7 @@ list_of_environments = {
     mountainCarDiscreteState: ["Discrete", "Discrete"],
     mountainCarContinuousState: ["Box", "Discrete"],
     trustgame: ["Discrete", "Discrete"],
+    humanoidStandup: ["Box", "Box"],
 }
 
 models_compatibility_action_space = {
@@ -87,6 +90,8 @@ def create_environment(environment_name, folder_path):
         env = MountainCarDiscreteState.create_environment(render_mode="rgb_array")
     elif environment_name == mountainCarContinuousState:   
         env = MountainCarContinuousState.create_environment(render_mode="rgb_array")
+    elif environment_name == humanoidStandup:
+        env = HumanoidStandup.create_environment(render_mode="rgb_array")
         # specify more environments
     else:
         raise Exception("Environment not found")
@@ -196,7 +201,8 @@ def load_environment(folder_path, render_mode ="human"):
         env = MountainCarDiscreteState.load_environment(path, render_mode)
     elif environment_name == mountainCarContinuousState:
         env = MountainCarContinuousState.load_environment(path, render_mode)
-
+    elif environment_name == humanoidStandup:
+        env = HumanoidStandup.load_environment(path, render_mode)
     return env, env.parameters, environment_name
 
 def load_model(folder_path):
