@@ -143,7 +143,7 @@ def train():
 
     # get a list of models which are compatible with the chosen environment by looking at the observation and action spaces 
     list_of_compatible_models = np.intersect1d(settings.models_compatibility_observation_space[env_spaces[0]], settings.models_compatibility_action_space[env_spaces[1]])
-    print(list_of_compatible_models)
+
     # 5. User decides which of the compatible models he wants to use
     prompt ="Which of the following compatible models do you want to use?\n"
     pairs, single_choice_prompt = helper.create_single_choice(list_of_compatible_models)
@@ -335,6 +335,8 @@ def create_demonstration_data():
         #...
     }
 
+    input_video_or_text = helper.get_valid_input("Does the env render graphically or prints the output on terminal?\n1)GUI \n2)Terminal", ["1", "2"])
+    is_gui = input_video_or_text == "1"
 
     # Run a specific number of episodes to generate demonstration data
     demonstration_data = []
@@ -345,28 +347,43 @@ def create_demonstration_data():
         action_names = settings.get_action_names(environment_name)
         for key, value in action_names.items():
             print(f"Action index: {key}, value: {value}")
+        print("\n")
 
         obs,_ = env.reset()
         transitions = {}
         i = 0
         episode_over = False
         while not episode_over:
+            if is_gui:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        episode_over = True
+                    if event.type == pygame.KEYDOWN:
+                        if event.key in key_to_action and key_to_action[event.key] in action_names.keys():
+                            action = key_to_action[event.key]  
+
+                            observation, reward, terminated, truncated, info = env.step(action)
+
+                            transitions[i] = [obs, action, reward]
+
+                            episode_over = terminated or truncated
+
+                            obs = observation
+                            i +=1
+            else:
+                action = helper.get_valid_input("Enter the action index: ", [str(i) for i in action_names.keys()])
+                action = int(action)
+
+                observation, reward, terminated, truncated, info = env.step(action)
+
+                transitions[i] = [obs, action, reward]
+
+                episode_over = terminated or truncated
+
+                obs = observation
+                i +=1
+            
             env.render()
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    episode_over = True
-                if event.type == pygame.KEYDOWN:
-                    if event.key in key_to_action and key_to_action[event.key] in action_names.keys():
-                        action = key_to_action[event.key]  
-
-                        observation, reward, terminated, truncated, info = env.step(action)
-
-                        transitions[i] = [obs, action, reward]
-
-                        episode_over = terminated or truncated
-
-                        obs = observation
-                        i +=1
         
         demonstration_data.append(transitions)
         input_done = helper.get_valid_input("\nDo you want to play another episode? \n1)Yes\n2)No", ["1", "2"])

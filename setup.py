@@ -8,8 +8,8 @@ setup(
         "tqdm",
         "swig",
         "numpy==1.26.4",
-        #"gymnasium[box2d]", # Open AI gymnasium library
         "gymnasium[other]",
+        "gymnasium[mujoco]",
         "stable-baselines3[extra] == 2.4.0", # Stable baselines 3 library
         "sb3-contrib",
         "pathvalidate"

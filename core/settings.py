@@ -124,7 +124,7 @@ def create_model(model_name, env):
         model = A2CModel.create_model(env)
     elif model_name == ppo:
         model = PPOModel.create_model(env)
-    elif model_name == DynaQ:
+    elif model_name == dynaQ:
         model = DynaQ.create_model(env)
     else:
         raise Exception("Model not found")
