@@ -193,7 +193,7 @@ def load_environment(folder_path, render_mode ="human"):
     elif environment_name == trustgame:
         env = TrustGameEnv.load_environment(path, render_mode)
     elif environment_name == mountainCarDiscreteState:
-        env = MountainCarContinuousState.load_environment(path, render_mode)
+        env = MountainCarDiscreteState.load_environment(path, render_mode)
     elif environment_name == mountainCarContinuousState:
         env = MountainCarContinuousState.load_environment(path, render_mode)
 
