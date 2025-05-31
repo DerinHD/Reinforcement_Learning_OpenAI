@@ -16,7 +16,8 @@ class HumanoidStandup(BaseEnvironment, HumanoidStandupEnv):
         HumanoidStandupEnv.__init__(self, render_mode=render_mode)
 
         self.current_state, _ = self.reset()
-        self.feature_size = self.transform_state_action_to_feature(self.current_state, 0).shape[0]
+        # not needed
+        #self.feature_size = self.transform_state_action_to_feature(self.current_state, 0).shape[0]
 
         self.parameters = {
         }
