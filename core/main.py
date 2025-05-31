@@ -490,7 +490,7 @@ def showRewardFunction():
             print(f"state: {i}, action: {j}: feature: {f} reward: {theta@f}")
 
 def main():
-    logo = """
+    logo = r"""
   _____  _          _____          _      _                    
  |  __ \| |        / ____|        | |    | |                   
  | |__) | |       | |     ___   __| | ___| |__   __ _ ___  ___ 
