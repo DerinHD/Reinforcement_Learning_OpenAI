@@ -220,12 +220,10 @@ def evaluate():
             while not episode_over:
                 action = None
                 result = model.predict(obs)
-                if isinstance(result, tuple):
-                    action, _ = result
-                else:
-                    action = result
-
-                action = action.item()
+                action = result[0] if isinstance(result, tuple) else result
+                
+                if isinstance(action, np.ndarray) and action.size == 1:
+                    action = action.item()
 
                 observation, reward, terminated, truncated, info = env.step(action)
                 total_rewards+= reward
@@ -267,12 +265,10 @@ def show_inverse_RL():
     while not episode_over:
         action = None
         result = model.predict(obs)
-        if isinstance(result, tuple):
-            action, _ = result
-        else:
-            action = result
-
-        action = action.item()
+        action = result[0] if isinstance(result, tuple) else result
+        
+        if isinstance(action, np.ndarray) and action.size == 1:
+            action = action.item()
 
         observation, reward, terminated, truncated, info = env.step(action)
 
