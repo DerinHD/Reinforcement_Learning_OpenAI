@@ -34,19 +34,25 @@ class PPOModel(BaseModel):
         n_epochs = helper.valid_parameter("Number of PPO epochs", int, [1, float('inf')])
         ent_coef = helper.valid_parameter("Entropy coefficient", float, [0, 1])
         learning_rate = helper.valid_parameter("Learning rate", float, [0, 1])
+        batchsize = helper.valid_parameter("Batch size", int, [1, float('inf')])
 
 
+        if normalize:
+            env = DummyVecEnv([lambda: env])
+            env = VecNormalize(env, norm_obs=True, norm_reward=True, clip_obs=10.0)
+        
         # Initialize the PPO model
         model = PPO(
             policy=policy,
             env=env,
             n_steps=n_steps,
-            batch_size=128,
+            batch_size=batchsize,
             n_epochs=n_epochs,
             gamma=gamma,
             gae_lambda=gae_lambda,
             ent_coef=ent_coef,
             verbose=1,
+            learning_rate= learning_rate
         )
 
         return PPOModel(env, model)
